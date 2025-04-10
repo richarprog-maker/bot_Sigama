@@ -1,6 +1,7 @@
 const { getOpenAIResponse } = require('../../services/openaiService.js');
 const { getConversationFlowsText } = require('../../model/conversationFlows.js');
 const { processQuery, isDatabaseQuery } = require('../flujos/consultas/querysController.js');
+const { analyzeOtQuery, processOtChoice } = require('../flujos/consultas/otAnalyzer.js');
 const conversationState = new Map();
 
 function getOrCreateConversationState(sender) {
@@ -29,12 +30,63 @@ async function processWithOpenAI(message, sender, nombreCliente) {
   // Obtener o crear el estado de conversación para este remitente
   const state = getOrCreateConversationState(sender);
   
+  // Verificar si hay una consulta de OT pendiente que requiere elección del usuario
+  if (state.data.pendingOtQuery) {
+    console.log("Procesando elección de tipo de OT del usuario");
+    const originalMessage = state.data.pendingOtQuery;
+    
+    // Procesar la elección del usuario
+    const otResult = await processOtChoice(message, originalMessage);
+    
+    // Limpiar la consulta pendiente
+    state.data.pendingOtQuery = null;
+    
+    // Continuar con el procesamiento usando el mensaje enriquecido
+    message = originalMessage; // Restauramos el mensaje original para el historial
+    const isDbQuery = await isDatabaseQuery(otResult.enrichedMessage);
+    
+    if (isDbQuery) {
+      console.log("Procesando consulta de OT con tipo elegido:", otResult.otType);
+      try {
+        const queryResult = await processQuery(otResult.enrichedMessage, sender);
+        
+        if (queryResult.success) {
+          // Guardar la consulta en el historial de conversación
+          state.messages.push({ role: "user", content: message });
+          state.messages.push({ role: "assistant", content: queryResult.response });
+          if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+          
+          return queryResult.response;
+        }
+      } catch (error) {
+        console.error("Error procesando consulta a base de datos después de elección de OT:", error);
+        // Si falla, continuamos con el flujo normal de OpenAI
+      }
+    }
+  }
+  
+  // Analizar si es una consulta relacionada con OTs
+  const otAnalysis = await analyzeOtQuery(message);
+  
+  // Si se necesita que el usuario elija el tipo de OT, devolvemos el mensaje de elección
+  if (otAnalysis.needsUserChoice && otAnalysis.choiceMessage) {
+    console.log("Solicitando al usuario que elija el tipo de OT");
+    // Guardar el mensaje original en el estado para procesarlo después de la elección
+    state.data.pendingOtQuery = message;
+    return otAnalysis.choiceMessage;
+  }
+  
   // Verificar si es una consulta a la base de datos
   const isDbQuery = await isDatabaseQuery(message);
   if (isDbQuery) {
     console.log("Detectada consulta a base de datos:", message);
     try {
-      const queryResult = await processQuery(message, sender);
+      // Si es una consulta de OT, usamos el mensaje enriquecido
+      const messageToProcess = otAnalysis.isOtQuery ? otAnalysis.enrichedMessage : message;
+      console.log("Tipo de OT detectado:", otAnalysis.otType || "No es consulta de OT");
+      console.log("Mensaje enriquecido:", messageToProcess);
+      
+      const queryResult = await processQuery(messageToProcess, sender);
       
       if (queryResult.success) {
         // Guardar la consulta en el historial de conversación
