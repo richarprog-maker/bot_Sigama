@@ -107,7 +107,7 @@ async function processWithOpenAI(message, sender, nombreCliente) {
   const hora = `${fechaHoraActual.hora}:${fechaHoraActual.minuto}`;
 
   const systemPrompt = `
-Eres Sigma AI, experta en atención al cliente de un servicio.
+Eres Siena, experta en atención al cliente en consultas de OTs, Mesón y repuestos.
 
 **Fecha actual:** ${fechaActualISO}
 **Hora actual:** ${hora}

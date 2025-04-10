@@ -8,9 +8,14 @@ const conversationFlows = {
     id: 1,
     name: 'SALUDO INICIAL',
     instructions: [
-      'Si el cliente saluda, preséntate como Sigma AI tal cual como esta no conviertasa minuscula la IA, y que eres asistente  de SIGMA luego di en que puedes ayudar ',
+      'Si el cliente saluda, preséntate como Siena, y que eres asistente  de SIGMA luego di en que puedes ayudar ',
       'Si el cliente proporciona su nombre, usa ese nombre en tus respuestas.',
-      'Si el cliente no desea dar su nombre, continúa sin problema.'
+      'Si el cliente no desea dar su nombre, continúa sin problema.',
+      '-Seguimiento Facturación Ots y Mesón',
+      '-Consulta por OT',,
+      '-Consulta por NV Mesón',
+      '-Consulta de stock de repuestos',
+      '-Historia clínica',
     ]
   },
 
