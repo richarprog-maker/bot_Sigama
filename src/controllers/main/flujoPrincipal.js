@@ -1,7 +1,6 @@
 const { getOpenAIResponse } = require('../../services/openaiService.js');
 const { getConversationFlowsText } = require('../../model/conversationFlows.js');
-const { processQuery, isDatabaseQuery } = require('../flujos/consultas/querysController.js');
-const { analyzeOtQuery, processOtChoice } = require('../flujos/consultas/otAnalyzer.js');
+const { processQuery } = require('../flujos/consultas/querysController.js');
 const conversationState = new Map();
 
 function getOrCreateConversationState(sender) {
@@ -28,86 +27,14 @@ function obtenerFechaHoraActual() {
 
 async function processWithOpenAI(message, sender, nombreCliente) {
   // Obtener o crear el estado de conversación para este remitente
-  const state = getOrCreateConversationState(sender);
+   const state = getOrCreateConversationState(sender);
   
-  // Verificar si hay una consulta de OT pendiente que requiere elección del usuario
-  if (state.data.pendingOtQuery) {
-    console.log("Procesando elección de tipo de OT del usuario");
-    const originalMessage = state.data.pendingOtQuery;
-    
-    // Procesar la elección del usuario
-    const otResult = await processOtChoice(message, originalMessage);
-    
-    // Limpiar la consulta pendiente
-    state.data.pendingOtQuery = null;
-    
-    // Continuar con el procesamiento usando el mensaje enriquecido
-    message = originalMessage; // Restauramos el mensaje original para el historial
-    const isDbQuery = await isDatabaseQuery(otResult.enrichedMessage);
-    
-    if (isDbQuery) {
-      console.log("Procesando consulta de OT con tipo elegido:", otResult.otType);
-      try {
-        const queryResult = await processQuery(otResult.enrichedMessage, sender);
-        
-        if (queryResult.success) {
-          // Guardar la consulta en el historial de conversación
-          state.messages.push({ role: "user", content: message });
-          state.messages.push({ role: "assistant", content: queryResult.response });
-          if (state.messages.length > 10) state.messages = state.messages.slice(-10);
-          
-          return queryResult.response;
-        }
-      } catch (error) {
-        console.error("Error procesando consulta a base de datos después de elección de OT:", error);
-        // Si falla, continuamos con el flujo normal de OpenAI
-      }
-    }
-  }
-  
-  // Analizar si es una consulta relacionada con OTs
-  const otAnalysis = await analyzeOtQuery(message);
-  
-  // Si se necesita que el usuario elija el tipo de OT, devolvemos el mensaje de elección
-  if (otAnalysis.needsUserChoice && otAnalysis.choiceMessage) {
-    console.log("Solicitando al usuario que elija el tipo de OT");
-    // Guardar el mensaje original en el estado para procesarlo después de la elección
-    state.data.pendingOtQuery = message;
-    return otAnalysis.choiceMessage;
-  }
-  
-  // Verificar si es una consulta a la base de datos
-  const isDbQuery = await isDatabaseQuery(message);
-  if (isDbQuery) {
-    console.log("Detectada consulta a base de datos:", message);
-    try {
-      // Si es una consulta de OT, usamos el mensaje enriquecido
-      const messageToProcess = otAnalysis.isOtQuery ? otAnalysis.enrichedMessage : message;
-      console.log("Tipo de OT detectado:", otAnalysis.otType || "No es consulta de OT");
-      console.log("Mensaje enriquecido:", messageToProcess);
-      
-      const queryResult = await processQuery(messageToProcess, sender);
-      
-      if (queryResult.success) {
-        // Guardar la consulta en el historial de conversación
-        state.messages.push({ role: "user", content: message });
-        state.messages.push({ role: "assistant", content: queryResult.response });
-        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
-        
-        return queryResult.response;
-      }
-    } catch (error) {
-      console.error("Error procesando consulta a base de datos:", error);
-      // Si falla, continuamos con el flujo normal de OpenAI
-    }
-  }
   
   const fechaHoraActual = obtenerFechaHoraActual();
   const fechaActualISO = `${fechaHoraActual.año}-${String(fechaHoraActual.mes).padStart(2, '0')}-${String(fechaHoraActual.dia).padStart(2, '0')}`;
   const hora = `${fechaHoraActual.hora}:${fechaHoraActual.minuto}`;
 
   const systemPrompt = `
-Eres Siena, experta en atención al cliente en consultas de OTs, Mesón y repuestos.
 
 **Fecha actual:** ${fechaActualISO}
 **Hora actual:** ${hora}
@@ -123,7 +50,30 @@ Eres Siena, experta en atención al cliente en consultas de OTs, Mesón y repues
 
 **Restricciones importantes:**
 🔴 SOLO responde a preguntas relacionadas a las conultas no de otras areas ni de musica ni infomaciones generales 
+**Cuando detectes una consulta de este tipo, incluye la información en formato JSON al final del mensaje, precedida por "===CONULTAR_DATOS_SIGMA===":*
+**Instrucciones para consultas específicas:**
+Cuando un cliente solicite información relacionada a alguna de estas categorías, debes incluir el formato JSON para consultar la base de datos, pero NO menciones al usuario que estás generando un JSON:
 
+1. **Seguimiento Facturación OTs y Mesón**: Cuando pregunten sobre el estado de facturación, pagos pendientes o historial de facturación.
+   Ejemplo: "¿Cuál es el estado de facturación de la OT 12345?"
+
+2. **Consulta por OT**: Cuando pregunten por una Orden de Trabajo específica por su número.
+   Ejemplo: "Necesito información sobre la OT 54321" o "¿En qué estado está mi orden 54321?"
+
+3. **Consulta por NV Mesón**: Cuando pregunten por una Nota de Venta de Mesón.
+   Ejemplo: "¿Puedes verificar la nota de venta 98765?" o "Quiero saber el detalle de mi NV 98765"
+
+4. **Consulta de stock de repuestos**: Cuando pregunten por disponibilidad de repuestos.
+   Ejemplo: "¿Tienen disponible el repuesto XYZ-123?" o "Necesito saber si hay stock del componente ABC"
+
+5. **Historia clínica**: Cuando soliciten el historial de servicios o reparaciones.
+   Ejemplo: "¿Cuál es el historial de reparaciones del cliente Juan Pérez?" o "Necesito la historia clínica del vehículo con placa ABC-123"
+
+===CONULTAR_DATOS_SIGMA===
+{
+  "message": "consulta_detectada",
+  "tipo": "[tipo_de_consulta]"
+}
 ${getConversationFlowsText()}
 `.trim();
 
@@ -136,7 +86,41 @@ ${getConversationFlowsText()}
   const response = await getOpenAIResponse(messagesForOpenAI);
   
   // Procesar la respuesta de OpenAI
-  const cleanResponse = response;
+  let cleanResponse = response;
+  try {
+
+    if (response.includes("===CONULTAR_DATOS_SIGMA===")) {
+      console.log("Detectada consulta en formato JSON");
+      const jsonStartIndex = response.indexOf("===CONULTAR_DATOS_SIGMA===") + "===CONULTAR_DATOS_SIGMA===".length;
+      const jsonString = response.substring(jsonStartIndex).trim();
+      
+      try {
+        const jsonData = JSON.parse(jsonString);
+        console.log("Datos JSON extraídos:", jsonData);
+       
+        if (jsonData && jsonData.message === "consulta_detectada" && jsonData.tipo) {
+          console.log("Tipo de consulta detectada:", jsonData.tipo);
+          
+          // Procesar la consulta usando el tipo detectado
+          const queryResult = await processQuery(message, sender);
+          
+          if (queryResult.success) {
+            // Guardar la consulta en el historial de conversación
+            state.messages.push({ role: "user", content: message });
+            state.messages.push({ role: "assistant", content: queryResult.response });
+            if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+            
+            cleanResponse = queryResult.response;
+          }
+        }
+      } catch (jsonError) {
+        console.error("Error al parsear JSON de la respuesta:", jsonError);
+      }
+    }
+  } catch (error) {
+    console.error("Error al procesar respuesta OpenAI:", error);
+    cleanResponse = "Lo siento, hubo un problema al procesar tu solicitud. Por favor, intenta de nuevo.";
+  }
 
   state.messages.push({ role: "user", content: message });
   state.messages.push({ role: "assistant", content: cleanResponse });
@@ -155,5 +139,7 @@ module.exports = {
       console.error("Error:", error);
       return "Lo siento, algo salió mal. ¿Puedes intentarlo de nuevo?";
     }
-  }
+  },
+  // Exportar la función para acceder al estado de conversación
+  getOrCreateConversationState
 }

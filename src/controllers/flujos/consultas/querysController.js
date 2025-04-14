@@ -13,10 +13,16 @@ async function processQuery(query, sender) {
         logger.info(`Procesando consulta de base de datos: ${query}`);
         logger.info(`Remitente: ${sender}`);
 
-        const result = await queryService.processNaturalLanguageQuery(query);
+        // Obtener el historial de conversación del estado global
+        const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
+        const conversationHistory = conversationState ? conversationState.messages : [];
+        
+        // Pasar el historial de conversación al servicio de consultas
+        const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory);
 
         // Agregar console.log para ver la consulta SQL y los resultados en la terminal
         console.log('===== CONSULTA SQL Y RESULTADOS =====');
+        console.log('Contexto detectado:', queryService.getQueryContext());
         console.log('SQL Query:', result.sql_query);
         console.log('Resultados:', JSON.stringify(result.query_result.results, null, 2));
         console.log('====================================');
