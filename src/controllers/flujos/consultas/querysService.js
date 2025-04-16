@@ -364,22 +364,17 @@ class EnhancedNaturalLanguageMySQLInterface {
         ${noResults ? "IMPORTANTE: No se encontraron resultados para esta consulta. Debes responder indicando que no se encontró información para la consulta realizada." : ""}
         ${contextualInstructions}
         
+        INSTRUCCIONES CRÍTICAS PARA FORMATO DE RESPUESTA:
+        - DEBES generar una respuesta COMPLETA en un ÚNICO bloque de texto.
+        - NO dividas la información en múltiples párrafos separados.
+        - NO uses múltiples saludos o introducciones.
+        - Toda la información debe estar conectada en un solo mensaje continuo.
+        
         INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs:
         
         Cuando la consulta sea sobre una OT por número o placa, DEBES presentar la información en EXACTAMENTE este formato:
         
-        Por supuesto. Aquí tienes la información de la OT [número]:
-        OT: [número]
-        Sede: [local]
-        Asesor: [Nombre del asesor]
-        Doc. Cliente: [Número de documento]
-        Cliente: [cliente]
-        F. Apertura OT: [fecha de apertura]
-        F. Facturación o Cierre: [Fecha de facturación o cierre]
-        Área: [área]
-        Tipo de OT: [Tipo de OT]
-        Estado actual: [estado]
-        Total OT: [moneda facturada]
+        Por supuesto. Aquí tienes la información de la OT [número]:\nOT: [número]\nSede: [local]\nAsesor: [Nombre del asesor]\nDoc. Cliente: [Número de documento]\nCliente: [cliente]\nF. Apertura OT: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda facturada]
         
         Si algún dato no está disponible, indica "No disponible" en ese campo, pero NUNCA omitas ningún campo del formato.
         Si la consulta es por placa, usa el mismo formato pero agrega la placa al inicio de la respuesta.
@@ -388,33 +383,13 @@ class EnhancedNaturalLanguageMySQLInterface {
         
         Cuando la consulta sea sobre una NV MESÓN (Nota de Venta de Mesón) por número, DEBES presentar la información en EXACTAMENTE este formato:
         
-        Por supuesto. Aquí tienes la información de la NV MESÓN [número]:
-        NV: [número]
-        Doc. Cliente: [Número de documento]
-        Cliente: [nombre del cliente]
-        F. Apertura: [fecha de apertura]
-        F. Facturación o Cierre: [fecha de facturación]
-        Cantidad de repuestos: [cantidad]
-        Total NV: [moneda] (Sin impuestos)
+        Por supuesto. Aquí tienes la información de la NV MESÓN [número]:\nNV: [número]\nDoc. Cliente: [Número de documento]\nCliente: [nombre del cliente]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [fecha de facturación]\nCantidad de repuestos: [cantidad]\nTotal NV: [moneda] (Sin impuestos)
 
         INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE REPUESTOS O CONSULAS REPUESTOS:
 
         Cuando la consulta sea sobre un repuesto o consulta de repuestos, DEBES presentar la información en EXACTAMENTE este formato:
 
-
-        cliente : en soles
-
-        Precio unitario: [moneda] (Sin impuestos)
-
-        ICC: [ICC]
-
-        Stock disponible:
-
-        Local 1: 5 - Ubicación: A/A
-
-        Local 2: 5 - Ubicación: A/A
-
-        Local 4: 5 - Ubicación: A/A
+        cliente : en soles\nPrecio unitario: [moneda] (Sin impuestos)\nICC: [ICC]\nStock disponible:\nLocal 1: 5 - Ubicación: A/A\nLocal 2: 5 - Ubicación: A/A\nLocal 4: 5 - Ubicación: A/A
 
         eso agrega en el prompt  se refiere a la tabla de  cosnultas repuestos
 
@@ -423,8 +398,10 @@ class EnhancedNaturalLanguageMySQLInterface {
         Si algún dato no está disponible, indica "No disponible" en ese campo, pero NUNCA omitas ningún campo del formato.
         
         Para otras consultas que no sean sobre OTs o NV MESÓN específicas, presenta la información de manera clara y concisa.
-    si es historial clinica reponde de la siguente manera:
-      Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+        
+        Si es historial clinica responde de la siguiente manera:
+        Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+        
         Consulta: ${query}
         SQL: ${sqlQuery}
         Resultados: ${JSON.stringify(serializableResult, null, 2)}
@@ -434,8 +411,10 @@ class EnhancedNaturalLanguageMySQLInterface {
             const response = await openai.chat.completions.create({
                 model: "gpt-4o-mini-2024-07-18",
                 messages: [{ role: "user", content: prompt }],
-                max_tokens: 500,
-                temperature: 0.3
+                max_tokens: 1000,
+                temperature: 0.3,
+                presence_penalty: 0.6,
+                frequency_penalty: 0.5
             });
             
             return {

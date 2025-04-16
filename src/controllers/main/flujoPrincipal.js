@@ -69,11 +69,30 @@ Cuando un cliente solicite información relacionada a alguna de estas categoría
 5. **Historia clínica**: Cuando soliciten el historial de servicios o reparaciones.
    Ejemplo: "¿Cuál es el historial de reparaciones del cliente Juan Pérez?" o "Necesito la historia clínica del vehículo con placa ABC-123"
 
+6. **Generación de gráficas**: Cuando soliciten visualizar datos en forma de gráfica.
+   Ejemplo: "Muéstrame una gráfica de las ventas por mes" o "Necesito un gráfico de pastel con los repuestos más vendidos"
+
 ===CONULTAR_DATOS_SIGMA===
 {
   "message": "consulta_detectada",
   "tipo": "[tipo_de_consulta]"
 }
+
+**Cuando detectes una solicitud de gráfica, incluye la información en formato JSON al final del mensaje, precedida por "===GENERAR_GRAFICA_SIGMA===":*
+===GENERAR_GRAFICA_SIGMA===
+{
+  "message": "grafica_solicitada",
+  "query": "[consulta_para_datos]",
+  "chartType": "[tipo_de_grafica]",
+  "title": "[titulo_opcional]"
+}
+
+Para el campo chartType, usa 'bar' para gráficas de barras o 'pie' para gráficas de pastel.
+Ejemplos de solicitudes de gráficas:
+- "Muéstrame una gráfica de barras con las OTs por asesor"
+- "Genera un gráfico de pastel con los repuestos más vendidos"
+- "Quiero ver una gráfica de las ventas por mes"
+- "Necesito visualizar en una gráfica la distribución de OTs por estado"
 ${getConversationFlowsText()}
 `.trim();
 
@@ -115,6 +134,49 @@ ${getConversationFlowsText()}
         }
       } catch (jsonError) {
         console.error("Error al parsear JSON de la respuesta:", jsonError);
+      }
+    } else if (response.includes("===GENERAR_GRAFICA_SIGMA===")) {
+      console.log("Detectada solicitud de gráfica en formato JSON");
+      const jsonStartIndex = response.indexOf("===GENERAR_GRAFICA_SIGMA===") + "===GENERAR_GRAFICA_SIGMA===".length;
+      const jsonString = response.substring(jsonStartIndex).trim();
+      
+      try {
+        const jsonData = JSON.parse(jsonString);
+        console.log("Datos de gráfica extraídos:", jsonData);
+        
+        if (jsonData && jsonData.message === "grafica_solicitada") {
+          console.log("Solicitud de gráfica detectada:", jsonData.query);
+          
+          // Importar el controlador de gráficas
+          const { processChartRequest } = require('../flujos/graficas/chartController');
+          
+          // Respondemos al usuario que estamos generando la gráfica
+          cleanResponse = "Estoy generando la gráfica solicitada. Te la enviaré en un momento...";
+          
+          // Guardar la consulta en el historial de conversación
+          state.messages.push({ role: "user", content: message });
+          state.messages.push({ role: "assistant", content: cleanResponse });
+          
+          // Procesar la solicitud de gráfica en segundo plano
+          setTimeout(async () => {
+            try {
+              // Procesar la solicitud de gráfica usando el controlador
+              await processChartRequest(
+                jsonData.query,
+                sender,
+                jsonData.chartType || 'bar',
+                jsonData.title || ''
+              );
+              console.log("Gráfica procesada y enviada exitosamente");
+            } catch (error) {
+              console.error("Error al procesar gráfica en segundo plano:", error);
+            }
+          }, 100);
+          
+          return cleanResponse;
+        }
+      } catch (jsonError) {
+        console.error("Error al parsear JSON de la solicitud de gráfica:", jsonError);
       }
     }
   } catch (error) {

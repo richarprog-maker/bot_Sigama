@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const {join} = require('path')
+const fs = require('fs')
 const {createReadStream} = require('fs')
 
 const { exec } = require('child_process');
@@ -9,6 +10,7 @@ const { getConnection, initializeDBConnection } = require('../config/dbConnectio
 const jwt = require("jsonwebtoken");
 const bcrypt = require ("bcrypt");
 const cookieParser = require ("cookie-parser");
+const chartService = require('../services/chartService');
 
 
 router.post('/send-message-bot', async (req, res) => {
@@ -51,6 +53,89 @@ router.post('/send-media-bot', async (req, res) =>{
   res.send({ data: "enviado!"+url })
 });
 
+/**
+ * Endpoint para generar gráficas a partir de consultas SQL
+ * Recibe una consulta en lenguaje natural y devuelve la URL de la imagen generada
+ */
+router.post('/generate-chart', async (req, res) => {
+  try {
+    const { query, chartType = 'bar', title = 'Gráfica de datos', xLabel = '', yLabel = '' } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({ error: "Se requiere una consulta para generar la gráfica" });
+    }
+    
+    // Validar tipo de gráfica
+    if (chartType !== 'bar' && chartType !== 'pie') {
+      return res.status(400).json({ error: "Tipo de gráfica no válido. Use 'bar' o 'pie'" });
+    }
+    
+    // Generar gráfica
+    const chartUrl = await chartService.generateChartFromQuery(query, chartType, title, xLabel, yLabel);
+    
+    res.json({ 
+      success: true, 
+      url: chartUrl,
+      message: "Gráfica generada exitosamente"
+    });
+  } catch (error) {
+    console.error("[Error en /generate-chart]:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Error al generar la gráfica", 
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * Endpoint para enviar una gráfica generada a un número de WhatsApp
+ */
+router.post('/send-chart', async (req, res) => {
+  try {
+    const providerWs = req.providerWs;
+    const { phoneid, query, chartType = 'bar', title = 'Gráfica de datos', xLabel = '', yLabel = '', message = '' } = req.body;
+    
+    if (!phoneid || !query) {
+      return res.status(400).json({ error: "Se requiere un número de teléfono y una consulta" });
+    }
+    
+    // Validar tipo de gráfica
+    if (chartType !== 'bar' && chartType !== 'pie') {
+      return res.status(400).json({ error: "Tipo de gráfica no válido. Use 'bar' o 'pie'" });
+    }
+    
+    // Generar gráfica
+    const chartUrl = await chartService.generateChartFromQuery(query, chartType, title, xLabel, yLabel);
+    
+    // Preparar mensaje
+    let textToSend = message || `Aquí está la gráfica solicitada: ${title}`;
+    
+    // Formatear texto
+    let newText = textToSend.replace(/\\n/g, "");
+    const textModificado = newText.replace(/\.(?=\s+)/g, ".\n\n");
+    var nuevoTexto = textModificado.replace(": .", ":");
+        nuevoTexto = nuevoTexto.replace(":.", ":");
+    
+    // Enviar gráfica por WhatsApp
+    const phone = phoneid.includes('@') ? phoneid : `${phoneid}@s.whatsapp.net`;
+    await providerWs.sendMedia(phone, chartUrl, nuevoTexto.trim());
+    
+    res.json({ 
+      success: true, 
+      message: "Gráfica enviada exitosamente",
+      url: chartUrl
+    });
+  } catch (error) {
+    console.error("[Error en /send-chart]:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Error al enviar la gráfica", 
+      details: error.message 
+    });
+  }
+});
+
 
 
 
@@ -87,6 +172,29 @@ router.get('/qr', async (_, res) => {
     const fileStream = createReadStream(pathQrImage);
     res.writeHead(200, { "Content-Type": "image/png" });
     fileStream.pipe(res);
+});
+
+/**
+ * Endpoint para servir las imágenes de gráficas generadas
+ * Accesible mediante /chart-image/:filename
+ */
+router.get('/chart-image/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const chartPath = join(process.cwd(), 'tmp', 'charts', filename);
+        
+        // Verificar si el archivo existe
+        if (!fs.existsSync(chartPath)) {
+            return res.status(404).json({ error: "Imagen no encontrada" });
+        }
+        
+        const fileStream = createReadStream(chartPath);
+        res.writeHead(200, { "Content-Type": "image/png" });
+        fileStream.pipe(res);
+    } catch (error) {
+        console.error("[Error en /chart-image]:", error);
+        res.status(500).json({ error: "Error al servir la imagen" });
+    }
 });
 // router.get('/servicios', async (_, res) => {
 //     const pathImage = join(process.cwd(), `assets/img/servicicioskodo.jpg`);
