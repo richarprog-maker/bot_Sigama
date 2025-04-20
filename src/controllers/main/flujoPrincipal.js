@@ -1,6 +1,7 @@
 const { getOpenAIResponse } = require('../../services/openaiService.js');
 const { getConversationFlowsText } = require('../../model/conversationFlows.js');
 const { processQuery } = require('../flujos/consultas/querysController.js');
+const { processChartRequest } = require('../flujos/graficas/chartController');
 const conversationState = new Map();
 
 function getOrCreateConversationState(sender) {
@@ -50,12 +51,15 @@ async function processWithOpenAI(message, sender, nombreCliente) {
 
 **Restricciones importantes:**
 🔴 SOLO responde a preguntas relacionadas a las conultas no de otras areas ni de musica ni infomaciones generales 
-**Cuando detectes una consulta de este tipo, incluye la información en formato JSON al final del mensaje, precedida por "===CONULTAR_DATOS_SIGMA===":*
+
+**CRÍTICO: SIEMPRE debes incluir la información en formato JSON al final del mensaje cuando detectes una consulta específica, precedida por "===CONULTAR_DATOS_SIGMA===":*
+
 **Instrucciones para consultas específicas:**
-Cuando un cliente solicite información relacionada a alguna de estas categorías, debes incluir el formato JSON para consultar la base de datos, pero NO menciones al usuario que estás generando un JSON:
+Cuando un cliente solicite información relacionada a alguna de estas categorías, DEBES OBLIGATORIAMENTE incluir el formato JSON para consultar la base de datos, incluso si el mensaje no contiene un saludo previo. NO menciones al usuario que estás generando un JSON:
 
 1. **Seguimiento Facturación OTs y Mesón**: Cuando pregunten sobre el estado de facturación, pagos pendientes o historial de facturación.
-   Ejemplo: "¿Cuál es el estado de facturación de la OT 12345?"
+   Ejemplo: "¿Cuál es el estado de facturación de la OT 12345?" o "cuantas asesores hay en ots facturadas"
+   IMPORTANTE: SIEMPRE genera el JSON para este tipo de consultas, incluso si son preguntas directas sin saludo.
 
 2. **Consulta por OT**: Cuando pregunten por una Orden de Trabajo específica por su número.
    Ejemplo: "Necesito información sobre la OT 54321" o "¿En qué estado está mi orden 54321?"
@@ -78,7 +82,7 @@ Cuando un cliente solicite información relacionada a alguna de estas categoría
   "tipo": "[tipo_de_consulta]"
 }
 
-**Cuando detectes una solicitud de gráfica, incluye la información en formato JSON al final del mensaje, precedida por "===GENERAR_GRAFICA_SIGMA===":*
+**Cuando detectes una solicitud de gráfica, ya sea por ejemplo quiero grafica o algo relacionado si encaso no identifiques grafica no devulvas ese json, incluye la información en formato JSON al final del mensaje, precedida por "===GENERAR_GRAFICA_SIGMA===":*
 ===GENERAR_GRAFICA_SIGMA===
 {
   "message": "grafica_solicitada",
@@ -147,10 +151,6 @@ ${getConversationFlowsText()}
         if (jsonData && jsonData.message === "grafica_solicitada") {
           console.log("Solicitud de gráfica detectada:", jsonData.query);
           
-          // Importar el controlador de gráficas
-          const { processChartRequest } = require('../flujos/graficas/chartController');
-          
-          // Respondemos al usuario que estamos generando la gráfica
           cleanResponse = "Estoy generando la gráfica solicitada. Te la enviaré en un momento...";
           
           // Guardar la consulta en el historial de conversación

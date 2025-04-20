@@ -6,14 +6,7 @@ const chartService = require('../../../services/chartService');
 const axios = require('axios');
 const { puertoInit } = require('../../../../config.js');
 
-/**
- * Procesa una solicitud de gráfica y la envía al usuario
- * @param {string} query - Consulta para generar la gráfica
- * @param {string} sender - ID del remitente
- * @param {string} chartType - Tipo de gráfica ('bar' o 'pie')
- * @param {string} title - Título opcional para la gráfica
- * @returns {Promise<Object>} - Resultado del procesamiento
- */
+
 async function processChartRequest(query, sender, chartType = 'bar', title = '') {
     try {
         console.log(`Procesando solicitud de gráfica: ${query}`);

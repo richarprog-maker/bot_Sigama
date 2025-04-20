@@ -6,7 +6,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
 const axios = require('axios');
 const queryService = require('../controllers/flujos/consultas/querysService');
 
