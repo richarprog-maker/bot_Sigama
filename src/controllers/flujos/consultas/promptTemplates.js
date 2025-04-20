@@ -51,9 +51,9 @@ function generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery) 
             * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
         - Si la consulta es sobre la historia clínica de una placa específica, la condición WHERE debe ser por número de placa (placa = '[placa]') en la tabla "historial_clinica".
 
-        Si la consulta es por número de NV MESÓN, busca en la tabla "meson".
+        Si la consulta es por número de NV MESÓN o simplemente meson, busca en la tabla "meson".
         Si la consulta es sobre historial clinica de un vehículo, busca en la tabla "historial_clinica".
-        Si la consulta es sobre REPUESTOS, busca en la tabla "consultas_repuestos".
+        Si la consulta es sobre REPUESTOS, busca en la tabla "consultas_repuestos" y reliza el WHERE por la columna de cod_repuesto.
         Si la consulta es general sobre OTs, busca en la tabla "ots_facturadas".
                 
         Directrices generales:
@@ -175,7 +175,7 @@ function getContextualGuidance(contextType) {
         case 'REPUESTOS':
             return `
             IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre REPUESTOS y su disponibilidad.
-            Busca en la tabla de "consultas_repuestos".
+            Busca en la tabla de "consultas_repuestos" usa la columna "cod_repuesto" para el WHERE.
             `;
         case 'HISTORIA_CLINICA':
             return `

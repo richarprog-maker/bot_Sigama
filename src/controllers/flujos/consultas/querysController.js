@@ -17,6 +17,9 @@ async function processQuery(query, sender) {
         const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
         const conversationHistory = conversationState ? conversationState.messages : [];
         
+        // Resetear el contexto de consulta anterior para evitar que se quede atrapado en un contexto
+        queryService.setQueryContext(null);
+        
         // Pasar el historial de conversación al servicio de consultas
         const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory);
 

@@ -128,12 +128,10 @@ ${getConversationFlowsText()}
           const queryResult = await processQuery(message, sender);
           
           if (queryResult.success) {
-            // Guardar la consulta en el historial de conversación
-            state.messages.push({ role: "user", content: message });
-            state.messages.push({ role: "assistant", content: queryResult.response });
-            if (state.messages.length > 10) state.messages = state.messages.slice(-10);
-            
+            // No guardamos aquí los mensajes en el historial, lo haremos al final de la función
             cleanResponse = queryResult.response;
+            // Indicamos que ya se procesó este mensaje para evitar duplicación
+            state.lastProcessedMessage = message;
           }
         }
       } catch (jsonError) {
@@ -153,9 +151,8 @@ ${getConversationFlowsText()}
           
           cleanResponse = "Estoy generando la gráfica solicitada. Te la enviaré en un momento...";
           
-          // Guardar la consulta en el historial de conversación
-          state.messages.push({ role: "user", content: message });
-          state.messages.push({ role: "assistant", content: cleanResponse });
+          // Indicamos que ya se procesó este mensaje para evitar duplicación
+          state.lastProcessedMessage = message;
           
           // Procesar la solicitud de gráfica en segundo plano
           setTimeout(async () => {
@@ -184,9 +181,29 @@ ${getConversationFlowsText()}
     cleanResponse = "Lo siento, hubo un problema al procesar tu solicitud. Por favor, intenta de nuevo.";
   }
 
-  state.messages.push({ role: "user", content: message });
-  state.messages.push({ role: "assistant", content: cleanResponse });
-  if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+  // Solo agregamos los mensajes al historial si no se han procesado ya
+  if (state.lastProcessedMessage !== message) {
+    state.messages.push({ role: "user", content: message });
+    state.messages.push({ role: "assistant", content: cleanResponse });
+    if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+  } else {
+    // Si ya se procesó, solo actualizamos el último mensaje del asistente
+    if (state.messages.length > 0) {
+      // Actualizamos el último mensaje del asistente si existe
+      const lastMessageIndex = state.messages.findIndex(msg => msg.role === "assistant");
+      if (lastMessageIndex !== -1) {
+        state.messages[lastMessageIndex].content = cleanResponse;
+      } else {
+        // Si no hay mensaje del asistente, agregamos los mensajes normalmente
+        state.messages.push({ role: "user", content: message });
+        state.messages.push({ role: "assistant", content: cleanResponse });
+        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
+      }
+    }
+  }
+  
+  // Limpiamos la marca de mensaje procesado para la próxima consulta
+  state.lastProcessedMessage = null;
 
   return cleanResponse;
 }

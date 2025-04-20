@@ -45,6 +45,16 @@ const conversationFlows = {
       "- OBLIGATORIO: Solicita explícitamente que proporcione el número de OT o la placa del vehículo. Al menos uno de estos datos es IMPRESCINDIBLE para procesar la consulta.",
     ]
   },
+  CONSULTA_REPUESTOS: {
+    id: 4,
+    name: 'CONSULTA DE REPUESTOS',
+    instructions: [
+      'CRÍTICO: Cuando el cliente consulte sobre repuestos, PRIMERO verifica si ya proporcionó un código de repuesto en su mensaje.',
+      'Si el cliente YA PROPORCIONÓ un código de repuesto, NO vuelvas a solicitarlo y procede directamente con la consulta.',
+      'SOLO si el cliente NO ha proporcionado un código de repuesto, responde:',
+      'Para consultar la disponibilidad de un repuesto, necesito su código. Por favor, indícame el código del repuesto que deseas consultar.'
+    ]
+  },
 };
 
 /**
