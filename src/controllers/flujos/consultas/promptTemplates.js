@@ -52,6 +52,23 @@ function generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery) 
         - Si la consulta es sobre la historia clínica de una placa específica, la condición WHERE debe ser por número de placa (placa = '[placa]') en la tabla "historial_clinica".
 
         Si la consulta es por número de NV MESÓN o simplemente meson, busca en la tabla "meson".
+        - Si la consulta es sobre una NV MESÓN específica (por número), DEBES buscar en la tabla "meson" y usar LIMIT 1.
+          Asegúrate de incluir TODOS estos campos en tu consulta:
+          - Número de NV
+          - Documento del cliente
+          - Nombre del cliente
+          - Fecha de apertura
+          - Fecha de facturación o cierre
+          - Cantidad de repuestos
+          - Total NV (monto)
+        - Si la consulta es general sobre NV MESÓN (sin especificar número), DEBES buscar en la tabla "meson".
+          IMPORTANTE: DEBES incluir TODOS los parámetros mencionados en la consulta como condiciones en el WHERE, por ejemplo:
+          - Si se menciona una sede/local específica, incluir "local = '[local]'" en el WHERE
+          - Si se menciona un cliente específico, incluir "cliente = '[cliente]'" en el WHERE
+          - Si se menciona un documento específico, incluir "documento = '[documento]'" en el WHERE
+          - Para el periodo, considera que puede ser:
+            * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
+            * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
         Si la consulta es sobre historial clinica de un vehículo, busca en la tabla "historial_clinica".
         Si la consulta es sobre REPUESTOS, busca en la tabla "consultas_repuestos" y reliza el WHERE por la columna de cod_repuesto.
         Si la consulta es general sobre OTs, busca en la tabla "ots_facturadas".
@@ -115,9 +132,15 @@ function generateNaturalResponsePrompt(noResults, contextualInstructions, query,
         
         INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE NV MESÓN:
         
-        Cuando la consulta sea sobre una NV MESÓN (Nota de Venta de Mesón) por número, DEBES presentar la información en EXACTAMENTE este formato:
+        - **Para consultas sobre una NV MESÓN específica (por número):**
+          Cuando la consulta sea sobre una NV MESÓN (Nota de Venta de Mesón) por número, DEBES presentar la información en EXACTAMENTE este formato:
+          
+          Por supuesto. Aquí tienes la información de la NV MESÓN [número]:\nNV: [número]\nDoc. Cliente: [Número de documento]\nCliente: [nombre del cliente]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [fecha de facturación]\nCantidad de repuestos: [cantidad]\nTotal NV: [moneda] (Sin impuestos)
         
-        Por supuesto. Aquí tienes la información de la NV MESÓN [número]:\nNV: [número]\nDoc. Cliente: [Número de documento]\nCliente: [nombre del cliente]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [fecha de facturación]\nCantidad de repuestos: [cantidad]\nTotal NV: [moneda] (Sin impuestos)
+        - **Para consultas generales sobre NV MESÓN (que NO mencionen un número específico):**
+          IMPORTANTE: DEBES presentar la información en un formato claro y estructurado:
+          Aquí está la información solicitada para NV MESÓN:\n[Incluir aquí los resultados de la consulta en formato tabular o lista según corresponda]\n\nTotal de NV MESÓN encontradas: [número]
+          Si algún dato no está disponible, indica "No disponible" en ese campo correspondiente.
 
         INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE REPUESTOS O CONSULAS REPUESTOS:
 
@@ -171,6 +194,18 @@ function getContextualGuidance(contextType) {
             return `
             IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre NOTAS DE VENTA DE MESÓN.
             Busca en la tabla de "meson".
+            
+            INSTRUCCIONES CRÍTICAS PARA CONSULTAS GENERALES DE NV MESÓN:
+            - SIEMPRE incluye en el WHERE todos los parámetros mencionados en la consulta:
+              * Si se menciona una sede/local específica, incluye "local = '[local]'" en el WHERE
+              * Si se menciona un cliente específico, incluye "cliente = '[cliente]'" en el WHERE
+              * Si se menciona un documento específico, incluye "documento = '[documento]'" en el WHERE
+            - Para el periodo, considera que puede ser:
+              * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
+              * Fecha de cierre/facturación ("fecha_facturacion = 'YYYY-MM-DD'")
+              * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
+            - Para consultas generales, selecciona los campos relevantes que puedan responder a la pregunta del usuario
+             quiero que solo relices los select de los que desaa el cliente no toda las columnas nunca  hagas el select * from  de las tablas 
             `;
         case 'REPUESTOS':
             return `

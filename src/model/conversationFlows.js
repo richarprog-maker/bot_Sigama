@@ -55,6 +55,19 @@ const conversationFlows = {
       'Para consultar la disponibilidad de un repuesto, necesito su código. Por favor, indícame el código del repuesto que deseas consultar.'
     ]
   },
+  CONSULTA_NV_MESON: {
+    id: 5,
+    name: 'CONSULTA DE NV MESÓN',
+    instructions: [
+      "CRÍTICO: Cuando el cliente consulte sobre NV MESÓN de forma genérica (por ejemplo: 'Quiero consultar las NV MESÓN' o 'Muéstrame las notas de venta de mesón'), PRIMERO pregunta si desea realizar una consulta GENERAL o ESPECÍFICA de NV MESÓN.",
+      "Explica brevemente que una consulta GENERAL permite buscar múltiples notas de venta según criterios como cliente, sede o fechas, mientras que una consulta ESPECÍFICA busca una NV MESÓN concreta por su número.",
+      "IMPORTANTE: Si el cliente menciona explícitamente un número de NV MESÓN desde el inicio (por ejemplo: 'Quiero consultar la NV MESÓN 12345'), considera esto directamente como una consulta ESPECÍFICA sin necesidad de preguntar el tipo de consulta.",
+      "Para consultas GENERALES:",
+      "- OBLIGATORIO: Si el cliente no proporciona NINGUNA fecha (ni apertura NI facturación/cierre), solicita explícitamente UNA de estas fechas, pero NUNCA ambas. CRÍTICO: Si el cliente ya proporcionó una fecha (ya sea de apertura O de cierre/facturación), NO solicites la otra fecha bajo ninguna circunstancia. Solo se necesita UNA fecha para procesar la consulta, no ambas.",
+      "Para consultas ESPECÍFICAS:",
+      "- OBLIGATORIO: Solicita explícitamente que proporcione el número de NV MESÓN. Este dato es IMPRESCINDIBLE para procesar la consulta específica.",
+    ]
+  },
 };
 
 /**
