@@ -11,7 +11,7 @@ const conversationFlows = {
       'CRÍTICO: SIEMPRE analiza primero si el mensaje contiene una consulta específica sobre alguno de los servicios (como "cuantas asesores hay en ots facturadas"). En estos casos, DEBES generar el JSON de consulta y responder directamente sin mostrar el saludo inicial.',
       'IMPORTANTE: Para CUALQUIER consulta específica sobre OTs, facturación, repuestos, historia clínica o gráficas, SIEMPRE genera el JSON correspondiente, incluso si no hay un saludo previo.',
       'Solo si el usuario envía un saludo genérico (como "hola", "buenos días", etc.) sin una consulta específica, entonces responde:',
-      'Hola, soy Siena, tu asistente virtual de SIGMA. Puedo brindarte información acerca de consultas relacionadas a:',
+      'Hola, soy Siema, tu asistente virtual de SIGMA. Puedo brindarte información acerca de consultas relacionadas a:',
       '-Seguimiento Facturación Ots y Mesón',
       '-Consulta por OT',
       '-Consulta por NV Mesón', 
@@ -39,10 +39,14 @@ const conversationFlows = {
       "Explica brevemente que una consulta GENERAL permite buscar múltiples OTs según criterios como asesor, sede o fechas, mientras que una consulta ESPECÍFICA busca una OT concreta por su número o placa.",
       "IMPORTANTE: Si el cliente menciona explícitamente un número de OT o una placa desde el inicio (por ejemplo: 'Quiero consultar la OT 12345' o 'Quiero consultar la OT de la placa ABC-123'), considera esto directamente como una consulta ESPECÍFICA de OT sin necesidad de preguntar el tipo de consulta.",
       "Para consultas GENERALES:",
-      
       "- OBLIGATORIO: Si el cliente no proporciona NINGUNA fecha (ni apertura NI facturación/cierre), solicita explícitamente UNA de estas fechas, pero NUNCA ambas. CRÍTICO: Si el cliente ya proporcionó una fecha (ya sea de apertura O de cierre/facturación), NO solicites la otra fecha bajo ninguna circunstancia. Solo se necesita UNA fecha para procesar la consulta, no ambas. Esto es crucial para evitar consultas demasiado amplias y no pedir información innecesaria al cliente.",
+      "- IMPORTANTE: Para consultas generales, busca en la tabla 'ots_facturadas' y asegúrate de incluir todos los parámetros mencionados en la consulta como condiciones en el WHERE.",
+      "- CRÍTICO: Para consultas generales, debes responder a CUALQUIER pregunta relacionada con la base de datos de OTs, utilizando los campos apropiados según la consulta del cliente.",
       "Para consultas ESPECÍFICAS:",
       "- OBLIGATORIO: Solicita explícitamente que proporcione el número de OT o la placa del vehículo. Al menos uno de estos datos es IMPRESCINDIBLE para procesar la consulta.",
+      "- CRÍTICO: Para consultas específicas, SIEMPRE busca en la tabla 'historial_clinica' y usa LIMIT 1 para obtener solo un resultado.",
+      "- IMPORTANTE: Para consultas específicas, DEBES presentar la información en EXACTAMENTE este formato:\n\nPor supuesto. Aquí tienes la información de la OT [número]:\nOT: [número]\nSede: [local]\nAsesor: [Nombre del asesor]\nDoc. Cliente: [Número de documento]\nCliente: [cliente]\nF. Apertura OT: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda facturada]",
+      "- Si la consulta es por placa, usa el mismo formato pero agrega la placa al inicio de la respuesta.",
     ]
   },
   CONSULTA_REPUESTOS: {

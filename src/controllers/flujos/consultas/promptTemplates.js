@@ -24,9 +24,11 @@ function generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery) 
         Estado: [estado]
         Área: [área]
         Moneda: [moneda] (Sin impuestos)
+        
+        IMPORTANTE: Para consultas generales sobre OTs, debes responder a CUALQUIER pregunta relacionada con la base de datos, utilizando los campos apropiados según la consulta del cliente. Nunca uses SELECT * FROM, siempre selecciona solo los campos necesarios para responder la consulta.
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECÍFICAS O ESPECIFICO SIEPRE EN CUANDO INCLUYA LA PLACA O EL NUMERO DE OT:
-        - Si la consulta es sobre una OT específica (por número de OT o placa), DEBES buscar en la tabla "historial_clinica" y usar LIMIT 1.
+        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECÍFICAS (CUANDO INCLUYA LA PLACA O EL NÚMERO DE OT):
+        - Si la consulta es sobre una OT específica (por número de OT o placa), DEBES buscar EXCLUSIVAMENTE en la tabla "historial_clinica" y NUNCA en "ots_facturadas". SIEMPRE usa LIMIT 1.
           Asegúrate de incluir TODOS estos campos en tu consulta:
           - Número de OT
           - Sede/Local
@@ -108,8 +110,9 @@ function generateNaturalResponsePrompt(noResults, contextualInstructions, query,
         - NO dividas la información en múltiples párrafos separados.
         - NO uses múltiples saludos o introducciones.
         - Toda la información debe estar conectada en un solo mensaje continuo.
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESOECIFICAS
-        - PARA LA CONSULTAS DE OTS GENERAL QUIERO LOS SIGUNETES CAMPOS:
+
+        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs GENERALES
+        - PARA LAS CONSULTAS DE OTS GENERAL QUIERO LOS SIGUIENTES CAMPOS:
         Periodo: [periodo] 
         Local: [local]
         Marca: [marca]
@@ -117,13 +120,15 @@ function generateNaturalResponsePrompt(noResults, contextualInstructions, query,
         Área: [área]
         Moneda: [moneda] (Sin impuestos)
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECIFICAS O ESPECIFICO SIEPRE EN CUANDO INCLUYA LA PLACA O EL NUMERO DE OT:
+        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECÍFICAS (CUANDO INCLUYA LA PLACA O EL NÚMERO DE OT):
 
         - **Para consultas sobre una OT específica (por número o placa):**
           IMPORTANTE: DEBES presentar la información en EXACTAMENTE este formato:
           Por supuesto. Aquí tienes la información de la OT [número]:\nOT: [número]\nSede: [local]\nAsesor: [Nombre del asesor]\nDoc. Cliente: [Número de documento]\nCliente: [cliente]\nF. Apertura OT: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda facturada]
           Si algún dato no está disponible, indica "No disponible" en ese campo, pero NUNCA omitas ningún campo del formato.
-          Si la consulta es por placa, usa el mismo formato pero agrega la placa al inicio de la respuesta.
+          Si la consulta es por placa, DEBES presentar la información en EXACTAMENTE este formato:
+          Aquí tienes la información relacionada con la placa [número]:\n\nÚltima OT asociada: [número]\nAsesor: [Nombre del asesor]\nSede: [local]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda] (Sin impuestos)
+          CRÍTICO: Para consultas específicas SIEMPRE debes usar LIMIT 1 en la consulta SQL. Esto es obligatorio sin excepciones.
 
         - **Para consultas generales sobre OTs (que NO mencionen un número específico de OT o placa):**
           IMPORTANTE: DEBES presentar la información en EXACTAMENTE este formato:
@@ -157,7 +162,7 @@ function generateNaturalResponsePrompt(noResults, contextualInstructions, query,
         Para otras consultas que no sean sobre OTs o NV MESÓN específicas, presenta la información de manera clara y concisa.
         
         Si es historial clinica responde de la siguiente manera:
-        Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+        Sede: [local] | Asesor: [Nombre del asesor] | OT: [número] | Tipo OT: [Tipo de OT] | Kilometraje: [Kilometraje] | F. Apertura: [fecha de apertura] | F. Facturación o Cierre: [Fecha de facturación o cierre]
         
         Consulta: ${query}
         SQL: ${sqlQuery}
@@ -177,8 +182,10 @@ function getContextualGuidance(contextType) {
         case 'OT':
             return `
             IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre ÓRDENES DE TRABAJO (OT).
-            Prioriza las tablas relacionadas con OTs como "ots_facturadas" y "otsconsultadas".
-            Si la consulta es sobre asesores, asegúrate de buscar asesores relacionados con OTs, no de otras áreas.
+            
+            INSTRUCCIONES CRÍTICAS PARA CONSULTAS DE OTs:
+            - CRÍTICO: Si la consulta es sobre una OT ESPECÍFICA (por número de OT o placa), DEBES buscar EXCLUSIVAMENTE en la tabla "historial_clinica" y NUNCA en "ots_facturadas".
+            - Si la consulta es GENERAL sobre OTs (sin especificar número o placa), DEBES buscar en la tabla "ots_facturadas".
             
             INSTRUCCIONES CRÍTICAS PARA CONSULTAS GENERALES DE OTs:
             - SIEMPRE incluye en el WHERE todos los parámetros mencionados en la consulta:
@@ -189,6 +196,8 @@ function getContextualGuidance(contextType) {
               * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
               * Fecha de cierre/facturación ("fecha_facturacion = 'YYYY-MM-DD'")
               * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
+            - CRÍTICO: Debes responder a CUALQUIER pregunta relacionada con la base de datos de OTs, utilizando los campos apropiados según la consulta del cliente.
+            - NUNCA uses SELECT * FROM, siempre selecciona solo los campos necesarios para responder la consulta.
             `;
         case 'NV_MESON':
             return `
