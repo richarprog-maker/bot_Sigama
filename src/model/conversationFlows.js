@@ -1,10 +1,10 @@
-  /**
+/**
    * Modelo con los flujos de conversación para el asistente virtual
    * (patrón MVC – solo lógica de negocio de los flujos)
    */
 
   const conversationFlows = {
-    /* ────────────────────────────── 1. SALUDO ───────────────────────────── */
+
   /* ────────────────────────────── 1. SALUDO ───────────────────────────── */
   SALUDO_INICIAL: {
     id: 1,
@@ -67,9 +67,9 @@
         'Para OT GENERAL, pregunta qué información concreta necesita (estado, OTs abiertas, etc.) antes de generar JSON.',
 
         /* Fechas */
-        'CRÍTICO: Si menciona fecha o nombre de mes o rango PERO NO aclara apertura/facturación, pregunta cuál de las dos.',
-        '✅ Si el usuario ya dice “fecha de APERTURA” o “fecha de FACTURACIÓN”, NO preguntes de nuevo.',
-        '✅ Si el usuario no menciona fecha o mes no pidas esta informacion',
+        'CRÍTICO: Si menciona fecha, nombre de mes (como "enero", "febrero", etc.), año (como "2024", "2025") o rango de fechas PERO NO aclara si es de apertura o facturación, DEBES preguntar cuál de las dos.',
+        '✅ Si el usuario ya dice "fecha de APERTURA" o "fecha de FACTURACIÓN", NO preguntes de nuevo.',
+        '✅ Si el usuario no menciona ningún tipo de fecha, nombre de mes o año, no pidas esta información',
 
         /* Memoria */
         'MEMORIA: Guarda placa, número de OT y resto de parámetros aportados durante la sesión y reutilízalos.',
@@ -98,9 +98,9 @@
         'Para GENERALES: si hay fecha o rango y NO dice apertura/facturación, pregunta; si lo dice, NO preguntes.',
         'ESPECÍFICAS: pide el número si no lo dio.',
         /* Fechas */
-        'CRÍTICO: Si menciona fecha o nombre de mes o  o tambien año  PERO NO aclara apertura/facturación, pregunta cuál de las dos.',
-        '✅ Si el usuario ya dice “fecha de APERTURA” o “fecha de FACTURACIÓN”, NO preguntes de nuevo.',
-        '✅ Si el usuario no menciona fecha, nombre de mes o año  no pidas esta informacion',
+        'CRÍTICO: Si menciona fecha, nombre de mes (como "enero", "febrero", etc.), año (como "2024", "2025") o rango de fechas PERO NO aclara si es de apertura o facturación, DEBES preguntar cuál de las dos.',
+        '✅ Si el usuario ya dice "fecha de APERTURA" o "fecha de FACTURACIÓN", NO preguntes de nuevo.',
+        '✅ Si el usuario no menciona ningún tipo de fecha, nombre de mes o año, no pidas esta información',
 
         /* Memoria */
         'MEMORIA: Guarda placa, número de OT y resto de parámetros aportados durante la sesión y reutilízalos.',
