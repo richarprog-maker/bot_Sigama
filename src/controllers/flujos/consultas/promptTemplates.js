@@ -182,23 +182,23 @@ ${RESPONSE_BLOCK_RULES}
 Cuando sea sobre un repuesto:
 cliente : en soles
 
-pon en negrita los titulo  y los avalores sin estilo 
-Local 1:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
-Local 2:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
-Local 3:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
-Local 4:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
-Local 5:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
+pon en negrita los titulo  y los avalores sin estilo y cada fil haga un salto de linea 
+Local 1:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
+Local 2:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
+Local 3:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
+Local 4:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
+Local 5:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
 
 
 
 /* D) HISTORIA CLÍNICA
    ─────────────────── */
-   retorna en ese diseño de los 5 filas 
-Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+   retorna en ese diseño de los 5 filas  pon en negrita los titulo  y los avalores sin estilo y cada fil haga un salto de linea 
+Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
 
 /* D) OTS ESPECÍFICA (por número o placa)
    ──────────────────────────────────── */ 
