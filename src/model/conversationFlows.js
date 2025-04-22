@@ -18,7 +18,7 @@
 
       /* Saludo genérico */
       'Solo si el mensaje es un saludo genérico (“hola”, “buenos días”, etc.) responde:',
-      'Hola, soy Siema, tu asistente virtual de SIGMA. Puedo ayudarte con:',
+      'Hola, soy Siena, tu asistente virtual de SIGMA. Puedo ayudarte con:',
       '-Seguimiento Facturación Ots',
       '-Seguimiento Facturación Mesón',
       '-Consulta por OT',
