@@ -93,6 +93,7 @@ Si la consulta menciona "ots general",
   → tabla a usar: "ots_facturadas".
 • OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica" solo devuelve una fila.
 • OTs GENERAL                         → tabla "ots_facturadas".
+• Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna tipo
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
@@ -242,6 +243,7 @@ function getContextualGuidance(contextType) {
 IMPORTANTE: Contexto de ÓRDENES DE TRABAJO.
 • OTs ESPECÍFICA (por número o placa): tabla "historial_clinica".
 • OTs GENERAL: tabla "ots_facturadas".
+• Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna "tipo"
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
