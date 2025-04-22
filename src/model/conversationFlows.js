@@ -65,6 +65,11 @@
 
         /* OT general */
         'Para OT GENERAL, pregunta qué información concreta necesita (estado, OTs abiertas, etc.) antes de generar JSON.',
+        
+        /* Diferenciación entre montos y cantidades */
+        'CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:',
+        '- Si pregunta "cuánto" (montos/facturación) → responde con formato: "El monto facturado en [tipo] en [periodo] es de [moneda] (Sin impuestos)"',
+        '- Si pregunta "cuántas" (cantidad de OTs) → responde con formato: "Tienes [cantidad] órdenes de trabajo [estado]. Total de facturación: [moneda] (Sin impuestos). Mano de obra: [moneda] (Sin impuestos). Repuestos: [moneda] (Sin impuestos). Servicios terceros: [moneda] (Sin impuestos)"',
 
         /* Fechas */
         'CRÍTICO: Si menciona fecha, nombre de mes (como "enero", "febrero", etc.), año (como "2024", "2025") o rango de fechas PERO NO aclara si es de apertura o facturación, DEBES preguntar cuál de las dos.',
@@ -97,6 +102,11 @@
         'Si desde el inicio hay número de NV, trátalo como ESPECÍFICA.',
         'Para GENERALES: si hay fecha o rango y NO dice apertura/facturación, pregunta; si lo dice, NO preguntes.',
         'ESPECÍFICAS: pide el número si no lo dio.',
+        
+        /* Diferenciación entre montos y cantidades */
+        'CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:',
+        '- Si pregunta "cuánto" (montos/facturación) → usa SUM() y responde con formato: "El monto facturado en [tipo] en [periodo] es de [moneda] (Sin impuestos)"',
+        '- Si pregunta "cuántas" (cantidad de NVs) → usa COUNT() y responde con el formato adecuado para NV MESÓN',
         /* Fechas */
         'CRÍTICO: Si menciona fecha, nombre de mes (como "enero", "febrero", etc.), año (como "2024", "2025") o rango de fechas PERO NO aclara si es de apertura o facturación, DEBES preguntar cuál de las dos.',
         '✅ Si el usuario ya dice "fecha de APERTURA" o "fecha de FACTURACIÓN", NO preguntes de nuevo.',

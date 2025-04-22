@@ -69,10 +69,11 @@ Si la consulta menciona "meson", "NV", "nota de venta de mesón"
   • Si se trata de una NV específica (por número) DEBES usar LIMIT 1 y seleccionar:
     Número de NV, Documento del cliente, Nombre del cliente,
     Fecha de apertura, Fecha de facturación, Cantidad de repuestos, Total NV.
-    • Si es una consulta general y  menciona la palabra "facturación" o relacionados como "ha facturado" usa la consulta de SUM() y no hagas select de otras columans busca en las columnas de precio_soles o precio_dolares de acuerdo a la moneda, haz una suma de las columnas.
-    • Si es una consulta general, incluye TODOS los parámetros (sede, cliente, fechas, etc.) en el WHERE.
-    • Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
-    que el usuario mencione en condiciones WHERE.
+  • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
+    - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+    - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de NVs que cumplen los criterios.
+    - Si es una consulta general, incluye TODOS los parámetros (sede, cliente, fechas, etc.) en el WHERE.
+    - Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
   • IMPORTANTE: Si la consulta incluye un número_nv específico, SIEMPRE úsalo en el WHERE.
 
 /* REPUESTOS */
@@ -92,8 +93,9 @@ Si la consulta menciona "ots general",
   → tabla a usar: "ots_facturadas".
 • OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica" solo devuelve una fila.
 • OTs GENERAL                         → tabla "ots_facturadas".
-• Si menciona "facturación" o palabras relacionadas como:
-  - DEBES usar SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+• CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
+  - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
   - NUNCA uses WHERE 1=1 sin condiciones adicionales.
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
 • IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
@@ -146,8 +148,15 @@ ${RESPONSE_BLOCK_RULES}
 
 /* A) SEGUIMIENTO FACTURACIÓN OTs (ots_facturadas)
    ───────────────────────────────────────────── */
-- Aplica cuando la consulta menciona "factura", "facturado" o "facturación"
-si es ots general busca en la tabla de "ots_facturadas"
+• Para consultas de MONTOS (cuánto):
+  El monto facturado en [tipo de monto facturado] en los últimos [periodo] es de [moneda] (Sin impuestos).
+
+• Para consultas de CANTIDAD (cuántas):
+  Tienes [cantidad] órdenes de trabajo [estado]. Total de facturación: [moneda] (Sin impuestos). Mano de obra: [moneda] (Sin impuestos). Repuestos: [moneda] (Sin impuestos). Servicios terceros: [moneda] (Sin impuestos).
+
+• Para consultas por ASESOR:
+  El asesor [nombre del asesor] ha generado [cantidad] OT en el área de [área] en [periodo].
+  El asesor [nombre del asesor] ha generado una facturación total de [moneda] (Sin impuestos) en [periodo].
 
 
 /* B) NV MESÓN
@@ -233,8 +242,9 @@ function getContextualGuidance(contextType) {
 IMPORTANTE: Contexto de ÓRDENES DE TRABAJO.
 • OTs ESPECÍFICA (por número o placa): tabla "historial_clinica".
 • OTs GENERAL: tabla "ots_facturadas".
-• Si la consulta menciona "facturación" o términos relacionados:
-  - DEBES usar SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+• CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
+  - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
   - NUNCA uses WHERE 1=1 como única condición.
   - SIEMPRE incluye filtros específicos por sede, marca, asesor, fechas u otros parámetros mencionados.
 • Incluye en el WHERE todos los parámetros relevantes.
@@ -247,10 +257,14 @@ IMPORTANTE: Contexto de ÓRDENES DE TRABAJO.
 IMPORTANTE: Contexto de NOTAS DE VENTA DE MESÓN.
 Tabla: "meson".
 
+• CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
+  - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de NVs que cumplen los criterios.
+
 Para consultas generales:
 • Incluye sede, cliente, documento, rango de fechas, etc. en el WHERE.
 • El rango de fechas puede ser en "fecha_apertura" o "fecha_facturacion".
-aqui siempre verifica que se incluya meson si no nunca busques en esta tabla 
+• Siempre verifica que se incluya "meson" en la consulta, si no, nunca busques en esta tabla.
 ⚠  NUNCA uses SELECT * FROM; selecciona solo los campos mencionados o necesarios.
 `;
 
