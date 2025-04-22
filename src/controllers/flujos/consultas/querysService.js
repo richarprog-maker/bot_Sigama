@@ -252,10 +252,8 @@ class EnhancedNaturalLanguageMySQLInterface {
      * @returns {Promise<Object>} Respuesta procesada
      */
     async processNaturalLanguageQuery(query, maxResults = 10, conversationHistory = [], queryParams = null) {
-        // Si no tenemos un contexto establecido y hay historial, analizarlo
-        if (!this.getQueryContext() && conversationHistory && conversationHistory.length > 0) {
-            this.analyzeConversationContext(conversationHistory);
-        }
+        // No analizamos el historial de conversación para evitar confusión de contexto
+        // El contexto debe venir explícitamente en el tipo de consulta
         
         // Enriquecer la consulta con los parámetros estructurados si están disponibles
         let enrichedQuery = query;

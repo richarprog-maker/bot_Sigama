@@ -112,8 +112,14 @@ async function processWithOpenAI(message, sender) {
       }
 
       if (jsonData.message === 'consulta_detectada' && jsonData.tipo) {
-        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como “message” */
-        const queryResult = await processQuery(jsonData.contexto, sender);
+        /* ⬇️ Enviamos la consulta en formato estructurado para mantener el tipo */
+        const queryDataStructured = {
+          tipo: jsonData.tipo,
+          contexto: jsonData.contexto,
+          parametros: jsonData.parametros || {}
+        };
+        
+        const queryResult = await processQuery(queryDataStructured, sender);
 
         if (queryResult.success) {
           cleanResponse = queryResult.response;

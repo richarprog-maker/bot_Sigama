@@ -99,6 +99,7 @@ Si la consulta menciona "ots general",
   - NUNCA uses WHERE 1=1 sin condiciones adicionales.
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
 • IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
+• CRÍTICO: Cuando se menciona un tipo específico (como "repuestos", "mano de obra", etc.), usa la columna "tipo" y NO "categoria" en el WHERE.
 
 /* PARÁMETROS ESPECÍFICOS */
 Si la consulta incluye parámetros específicos como:

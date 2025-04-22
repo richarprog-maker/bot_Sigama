@@ -30,17 +30,14 @@ async function processQuery(queryData, sender) {
             logger.info(`Procesando consulta de base de datos en formato texto: ${queryData}`);
             query = queryData;
             
-            // Obtener el historial de conversación del estado global
-            const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
-            const conversationHistory = conversationState ? conversationState.messages : [];
-            
             // Resetear el contexto de consulta anterior para evitar que se quede atrapado en un contexto
             queryService.setQueryContext(null);
         }
         
         // Obtener el historial de conversación del estado global para contexto adicional
+        // Nota: El historial se mantiene en flujoPrincipal.js pero no lo usamos para análisis de contexto
         const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
-        const conversationHistory = conversationState ? conversationState.messages : [];
+        const conversationHistory = [];  // No usamos el historial para evitar confusión de contexto
         
         // Pasar el historial de conversación y los parámetros al servicio de consultas
         const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory, queryParams);
