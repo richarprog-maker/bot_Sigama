@@ -8,26 +8,48 @@ const logger = require('console');
 const openaiService = require('../../../services/openaiService.js');
 
 
-async function processQuery(query, sender) {
+async function processQuery(queryData, sender) {
     try {
-        logger.info(`Procesando consulta de base de datos: ${query}`);
-        logger.info(`Remitente: ${sender}`);
-
-        // Obtener el historial de conversación del estado global
+        // Verificar si estamos recibiendo un objeto JSON o una cadena de texto
+        let query, queryType, queryParams;
+        
+        if (typeof queryData === 'object' && queryData.tipo && queryData.contexto) {
+            // Formato nuevo estructurado
+            logger.info(`Procesando consulta estructurada de tipo: ${queryData.tipo}`);
+            query = queryData.contexto;
+            queryType = queryData.tipo;
+            queryParams = queryData.parametros || {};
+            
+            // Establecer el contexto de consulta basado en el tipo
+            queryService.setQueryContext(queryType);
+            
+            // Log de parámetros para depuración
+            logger.info(`Parámetros de consulta: ${JSON.stringify(queryParams)}`);
+        } else {
+            // Formato anterior (texto plano)
+            logger.info(`Procesando consulta de base de datos en formato texto: ${queryData}`);
+            query = queryData;
+            
+            // Obtener el historial de conversación del estado global
+            const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
+            const conversationHistory = conversationState ? conversationState.messages : [];
+            
+            // Resetear el contexto de consulta anterior para evitar que se quede atrapado en un contexto
+            queryService.setQueryContext(null);
+        }
+        
+        // Obtener el historial de conversación del estado global para contexto adicional
         const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
         const conversationHistory = conversationState ? conversationState.messages : [];
         
-        // Resetear el contexto de consulta anterior para evitar que se quede atrapado en un contexto
-        queryService.setQueryContext(null);
-        
-        // Pasar el historial de conversación al servicio de consultas
-        const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory);
+        // Pasar el historial de conversación y los parámetros al servicio de consultas
+        const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory, queryParams);
 
         // Agregar console.log para ver la consulta SQL y los resultados en la terminal
         console.log('===== CONSULTA SQL Y RESULTADOS =====');
         console.log('Contexto detectado:', queryService.getQueryContext());
         console.log('SQL Query:', result.sql_query);
-        console.log('Resultados:', JSON.stringify(result.query_result.results, null, 2));
+        // console.log('Resultados:', JSON.stringify(result.query_result.results, null, 2));
         console.log('====================================');
 
         return {

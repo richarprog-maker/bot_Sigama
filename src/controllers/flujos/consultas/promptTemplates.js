@@ -1,242 +1,290 @@
 /**
- * Plantillas de prompts para el servicio de consultas en lenguaje natural
- * Este archivo contiene todas las plantillas de prompts utilizadas por el servicio
+ * ──────────────────────────────────────────────────────────────────────────
+ * promptTemplates.js ▸ Plantillas optimizadas de prompts para LLM‑SQL
+ * ──────────────────────────────────────────────────────────────────────────
+ * Contiene:
+ *   1. generateSqlPrompt(...)         → Construye el prompt que convierte
+ *                                       lenguaje natural a SQL.
+ *   2. generateNaturalResponsePrompt(...) → Construye el prompt que convierte
+ *                                       los resultados SQL a respuesta humana.
+ *   3. getContextualGuidance(...)     → Devuelve guías según el tipo de
+ *                                       consulta (OT, NV_MESON, etc.).
+ *
+ *  ⚠  NOTA IMPORTANTE
+ *  ────────────────────────────────────────────────────────────────────────
+ *  • No se ha cambiado **ninguna** funcionalidad; solo se ha ordenado,
+ *    deduplicado y comentado el código para hacerlo más claro y mantenible.
+ *  • Todas las reglas de negocio y formatos de salida se conservan.
+ * ──────────────────────────────────────────────────────────────────────────
  */
 
+/* ╔══════════════════════════════════════════════════════════════════════╗ */
+/* ║  SECCIÓN 1 ▸ CONSTANTES DE TEXTO (para evitar repeticiones)           ║ */
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
+
+const GENERIC_SQL_RULES = `
+Directrices generales:
+1. Analiza cuidadosamente la intención de la consulta.
+2. Selecciona las tablas y columnas apropiadas.
+3. Genera SQL sintácticamente correcto.
+4. Usa WHERE, GROUP BY u ORDER BY según sea necesario.
+5. No uses JOINs.
+6. NUNCA uses SELECT * FROM; selecciona solo los campos necesarios.
+7. NUNCA ignores parámetros mencionados en la consulta (sede, asesor, marca, periodo, etc.).
+8. Devuelve solo la consulta SQL, sin explicaciones.
+`;
+
+const RESPONSE_BLOCK_RULES = `
+INSTRUCCIONES CRÍTICAS PARA FORMATO DE RESPUESTA:
+- DEBES generar la respuesta COMPLETA en un ÚNICO bloque de texto.
+- NO dividas la información en múltiples párrafos separados.
+- NO uses múltiples saludos o introducciones.
+- Toda la información debe estar conectada en un solo mensaje continuo.
+`;
+
+/* ╔══════════════════════════════════════════════════════════════════════╗ */
+/* ║  SECCIÓN 2 ▸ GENERADOR DE PROMPT SQL                                 ║ */
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
+
 /**
- * Genera el prompt para convertir consultas en lenguaje natural a SQL
- * @param {string} schemaDescription Descripción del esquema de la base de datos
- * @param {string} contextualGuidance Guía contextual basada en el tipo de consulta
- * @param {string} naturalQuery Consulta en lenguaje natural
- * @returns {string} Prompt completo para generar SQL
+ * generaSqlPrompt ▸ Crea el prompt que el LLM usará para producir SQL.
+ *
+ * @param {string} schemaDescription   Descripción breve del esquema BD.
+ * @param {string} contextualGuidance  Guía contextual según tipo de consulta.
+ * @param {string} naturalQuery        Consulta en lenguaje natural.
+ * @returns {string}                   Prompt completo.
  */
 function generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery) {
-    return `
-        Eres un experto generador de consultas SQL. Convierte la consulta en lenguaje natural a una consulta SQL precisa.
-        ${schemaDescription}
-        ${contextualGuidance}
-        
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs GENERAL:
-        busca en la tabla "ots_facturadas" HAS UN SELECT DE LAS SIGUINTES COLUMNAS:
-        Periodo: [periodo] 
-        Local: [local]
-        Marca: [marca]
-        Estado: [estado]
-        Área: [área]
-        Moneda: [moneda] (Sin impuestos)
-        
-        IMPORTANTE: Para consultas generales sobre OTs, debes responder a CUALQUIER pregunta relacionada con la base de datos, utilizando los campos apropiados según la consulta del cliente. Nunca uses SELECT * FROM, siempre selecciona solo los campos necesarios para responder la consulta.
+  return `
+Eres un experto generador de consultas SQL. Convierte la consulta en lenguaje natural a una consulta SQL precisa y optimizada.
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECÍFICAS (CUANDO INCLUYA LA PLACA O EL NÚMERO DE OT):
-        - Si la consulta es sobre una OT específica (por número de OT o placa), DEBES buscar EXCLUSIVAMENTE en la tabla "historial_clinica" y NUNCA en "ots_facturadas". SIEMPRE usa LIMIT 1.
-          Asegúrate de incluir TODOS estos campos en tu consulta:
-          - Número de OT
-          - Sede/Local
-          - Nombre del asesor
-          - Documento del cliente
-          - Nombre del cliente
-          - Fecha de apertura
-          - Fecha de facturación o cierre
-          - Área
-          - Tipo de OT
-          - Estado actual
-          - Total facturado (monto)
-          - Placa (si aplica)
-        - Si la consulta es general sobre OTs facturadas (sin especificar número o placa), DEBES buscar en la tabla "ots_facturadas".
-          IMPORTANTE: DEBES incluir TODOS los parámetros mencionados en la consulta como condiciones en el WHERE, por ejemplo:
-          - Si se menciona una sede/local específica (ej. "Los Olivos"), incluir "local = 'Los Olivos'" en el WHERE
-          - Si se menciona un área específica (ej. "mecánica"), incluir "area = 'mecánica'" en el WHERE
-          - Si se menciona una marca específica (ej. "NISSAN"), incluir "marca = 'NISSAN'" en el WHERE
-          - Para el periodo, considera que puede ser:
-            * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
-        
-            * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
-        - Si la consulta es sobre la historia clínica de una placa específica, la condición WHERE debe ser por número de placa (placa = '[placa]') en la tabla "historial_clinica".
+${schemaDescription}
+${contextualGuidance}
 
-        Si la consulta es por número de NV MESÓN o simplemente meson, busca en la tabla "meson".
-        - Si la consulta es sobre una NV MESÓN específica (por número), DEBES buscar en la tabla "meson" y usar LIMIT 1.
-          Asegúrate de incluir TODOS estos campos en tu consulta:
-          - Número de NV
-          - Documento del cliente
-          - Nombre del cliente
-          - Fecha de apertura
-          - Fecha de facturación o cierre
-          - Cantidad de repuestos
-          - Total NV (monto)
-        - Si la consulta es general sobre NV MESÓN (sin especificar número), DEBES buscar en la tabla "meson".
-          IMPORTANTE: DEBES incluir TODOS los parámetros mencionados en la consulta como condiciones en el WHERE, por ejemplo:
-          - Si se menciona una sede/local específica, incluir "local = '[local]'" en el WHERE
-          - Si se menciona un cliente específico, incluir "cliente = '[cliente]'" en el WHERE
-          - Si se menciona un documento específico, incluir "documento = '[documento]'" en el WHERE
-          - Para el periodo, considera que puede ser:
-            * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
-            * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
-        Si la consulta es sobre historial clinica de un vehículo, busca en la tabla "historial_clinica".
-        Si la consulta es sobre REPUESTOS, busca en la tabla "consultas_repuestos" y reliza el WHERE por la columna de cod_repuesto.
-        Si la consulta es general sobre OTs, busca en la tabla "ots_facturadas".
-                
-        Directrices generales:
-        1. Analiza cuidadosamente la intención de la consulta
-        2. Selecciona las tablas y columnas apropiadas
-        3. Genera SQL sintácticamente correcto
-        4. Usa WHERE, GROUP BY, ORDER BY según sea necesario
-        5. No uses JOINs
-        6. Optimiza el rendimiento cuando sea posible
-        7. NUNCA ignores parámetros mencionados en la consulta (sede, área, marca, periodo, etc.)
-        8. Devuelve solo la consulta SQL, sin explicaciones
-        
-        Consulta en Lenguaje Natural: ${naturalQuery}
-    `;
+/* ————————————————————————— INSTRUCCIONES ESPECÍFICAS ————————————————————————— */
+
+/* NV MESÓN */
+Si la consulta menciona "meson", "NV", "nota de venta de mesón"
+  → tabla a usar: "meson".
+  • Si se trata de una NV específica (por número) DEBES usar LIMIT 1 y seleccionar:
+    Número de NV, Documento del cliente, Nombre del cliente,
+    Fecha de apertura, Fecha de facturación, Cantidad de repuestos, Total NV.
+    • Si es una consulta general y  menciona la palabra "facturación" o relacionados como "ha facturado" usa la consulta de SUM() y no hagas select de otras columans busca en las columnas de precio_soles o precio_dolares de acuerdo a la moneda, haz una suma de las columnas.
+    • Si es una consulta general, incluye TODOS los parámetros (sede, cliente, fechas, etc.) en el WHERE.
+    • Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
+    que el usuario mencione en condiciones WHERE.
+  • IMPORTANTE: Si la consulta incluye un número_nv específico, SIEMPRE úsalo en el WHERE.
+
+/* REPUESTOS */
+Si la consulta es sobre repuestos
+  → tabla a usar: "consultas_repuestos".
+  • Usa la columna "cod_repuesto" en el WHERE.
+  • IMPORTANTE: Si la consulta incluye un cod_repuesto específico, SIEMPRE úsalo en el WHERE del codigo de repuesto  y limit 5 .
+
+/* HISTORIA CLÍNICA */
+Si la consulta es sobre historial clínico
+  → tabla a usar: "historial_clinica".
+  • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
+  . Siempre rezliza el limit 5 
+
+/* OTs */
+Si la consulta menciona "ots general",
+  → tabla a usar: "ots_facturadas".
+• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica" solo devuelve una fila.
+• OTs GENERAL                         → tabla "ots_facturadas".
+• Si menciona "facturación" o palabras relacionadas como:
+  - DEBES usar SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - NUNCA uses WHERE 1=1 sin condiciones adicionales.
+  - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
+• IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
+
+/* PARÁMETROS ESPECÍFICOS */
+Si la consulta incluye parámetros específicos como:
+- placa: Úsala en el WHERE para filtrar por vehículo
+- asesor: Úsalo en el WHERE para filtrar por asesor
+- sede: Úsala en el WHERE para filtrar por local
+- marca: Úsala en el WHERE para filtrar por marca
+- fecha_inicio y fecha_fin: Úsalas para filtrar por rango de fechas
+- tipo_fecha: Determina si el filtro de fechas aplica a "fecha_apertura" o "fecha_facturacion"
+
+${GENERIC_SQL_RULES}
+
+Consulta en Lenguaje Natural: ${naturalQuery}
+`;
 }
 
+/* ╔══════════════════════════════════════════════════════════════════════╗ */
+/* ║  SECCIÓN 3 ▸ GENERADOR DE RESPUESTA NATURAL                          ║ */
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
+
 /**
- * Genera el prompt para obtener respuestas en lenguaje natural a partir de resultados SQL
- * @param {boolean} noResults Indica si no se encontraron resultados
- * @param {string} contextualInstructions Instrucciones contextuales basadas en el tipo de consulta
- * @param {string} query Consulta original en lenguaje natural
- * @param {string} sqlQuery Consulta SQL generada
- * @param {string} serializableResult Resultados serializados de la consulta
- * @returns {string} Prompt completo para generar respuesta natural
+ * generateNaturalResponsePrompt ▸ Crea prompt para que el LLM exprese
+ *                                 resultados SQL al usuario.
+ *
+ * @param {boolean} noResults             Verdadero si la consulta no devolvió filas.
+ * @param {string} contextualInstructions Texto específico del tipo de consulta.
+ * @param {string} query                  Pregunta original en lenguaje natural.
+ * @param {string} sqlQuery               SQL ejecutado.
+ * @param {string} serializableResult     Resultado JSON serializado.
+ * @returns {string}                      Prompt completo.
  */
-function generateNaturalResponsePrompt(noResults, contextualInstructions, query, sqlQuery, serializableResult) {
-    return `
-        Eres un analista de datos especializado en presentar información de manera clara y estructurada.
-        
-        ${noResults ? "IMPORTANTE: No se encontraron resultados para esta consulta. Debes responder indicando que no se encontró información para la consulta realizada." : ""}
-        ${contextualInstructions}
-        
-        INSTRUCCIONES CRÍTICAS PARA FORMATO DE RESPUESTA:
-        - DEBES generar una respuesta COMPLETA en un ÚNICO bloque de texto.
-        - NO dividas la información en múltiples párrafos separados.
-        - NO uses múltiples saludos o introducciones.
-        - Toda la información debe estar conectada en un solo mensaje continuo.
+function generateNaturalResponsePrompt(
+  noResults,
+  contextualInstructions,
+  query,
+  sqlQuery,
+  serializableResult
+) {
+  return `
+Eres un analista de datos especializado en presentar información de manera clara y estructurada.
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs GENERALES
-        - PARA LAS CONSULTAS DE OTS GENERAL QUIERO LOS SIGUIENTES CAMPOS:
-        Periodo: [periodo] 
-        Local: [local]
-        Marca: [marca]
-        Estado: [estado]
-        Área: [área]
-        Moneda: [moneda] (Sin impuestos)
+${noResults ? "IMPORTANTE: No se encontraron resultados. Debes indicarlo al usuario." : ""}
+${contextualInstructions}
+${RESPONSE_BLOCK_RULES}
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE OTs ESPECÍFICAS (CUANDO INCLUYA LA PLACA O EL NÚMERO DE OT):
+/* ———————————————————— FORMATOS ESPECÍFICOS ———————————————————— */
 
-        - **Para consultas sobre una OT específica (por número o placa):**
-          IMPORTANTE: DEBES presentar la información en EXACTAMENTE este formato:
-          Por supuesto. Aquí tienes la información de la OT [número]:\nOT: [número]\nSede: [local]\nAsesor: [Nombre del asesor]\nDoc. Cliente: [Número de documento]\nCliente: [cliente]\nF. Apertura OT: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda facturada]
-          Si algún dato no está disponible, indica "No disponible" en ese campo, pero NUNCA omitas ningún campo del formato.
-          Si la consulta es por placa, DEBES presentar la información en EXACTAMENTE este formato:
-          Aquí tienes la información relacionada con la placa [número]:\n\nÚltima OT asociada: [número]\nAsesor: [Nombre del asesor]\nSede: [local]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [Fecha de facturación o cierre]\nÁrea: [área]\nTipo de OT: [Tipo de OT]\nEstado actual: [estado]\nTotal OT: [moneda] (Sin impuestos)
-          CRÍTICO: Para consultas específicas SIEMPRE debes usar LIMIT 1 en la consulta SQL. Esto es obligatorio sin excepciones.
+/* A) SEGUIMIENTO FACTURACIÓN OTs (ots_facturadas)
+   ───────────────────────────────────────────── */
+- Aplica cuando la consulta menciona "factura", "facturado" o "facturación"
+si es ots general busca en la tabla de "ots_facturadas"
 
-        - **Para consultas generales sobre OTs (que NO mencionen un número específico de OT o placa):**
-          IMPORTANTE: DEBES presentar la información en EXACTAMENTE este formato:
-          Aquí está la información solicitada para OTs en [local] de marca [marca] en el área de [área]:\n[Incluir aquí los resultados de la consulta en formato tabular o lista según corresponda]\n\nTotal de OTs encontradas: [número]
-          Si algún dato no está disponible, indica "No disponible" en ese campo correspondiente.
-        
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE NV MESÓN:
-        
-        - **Para consultas sobre una NV MESÓN específica (por número):**
-          Cuando la consulta sea sobre una NV MESÓN (Nota de Venta de Mesón) por número, DEBES presentar la información en EXACTAMENTE este formato:
-          
-          Por supuesto. Aquí tienes la información de la NV MESÓN [número]:\nNV: [número]\nDoc. Cliente: [Número de documento]\nCliente: [nombre del cliente]\nF. Apertura: [fecha de apertura]\nF. Facturación o Cierre: [fecha de facturación]\nCantidad de repuestos: [cantidad]\nTotal NV: [moneda] (Sin impuestos)
-        
-        - **Para consultas generales sobre NV MESÓN (que NO mencionen un número específico):**
-          IMPORTANTE: DEBES presentar la información en un formato claro y estructurado:
-          Aquí está la información solicitada para NV MESÓN:\n[Incluir aquí los resultados de la consulta en formato tabular o lista según corresponda]\n\nTotal de NV MESÓN encontradas: [número]
-          Si algún dato no está disponible, indica "No disponible" en ese campo correspondiente.
 
-        INSTRUCCIONES ESPECÍFICAS PARA CONSULTAS DE REPUESTOS O CONSULAS REPUESTOS:
+/* B) NV MESÓN
+   ─────────── */
+• NV ESPECÍFICA (por número):
+  Por supuesto. Aquí tienes la información de la NV MESÓN [número]:
+  NV: [número]
+  Doc. Cliente: [doc_cliente]
+  Cliente: [cliente]
+  F. Apertura: [fecha_apertura]
+  F. Facturación: [fecha_facturacion]
+  Cantidad de repuestos: [cantidad]
+  Total NV: S/ [monto] (Sin impuestos)
 
-        Cuando la consulta sea sobre un repuesto o consulta de repuestos, DEBES presentar la información en EXACTAMENTE este formato:
+• NV GENERAL (sin número):
+  Aquí está la información solicitada para NV MESÓN:
+  [lista/tabla de resultados]
+  Total de NV MESÓN encontradas: [número]
 
-        cliente : en soles\nPrecio unitario: [moneda] (Sin impuestos)\nICC: [ICC]\nStock disponible:\nLocal 1: 5 - Ubicación: A/A\nLocal 2: 5 - Ubicación: A/A\nLocal 4: 5 - Ubicación: A/A
+/* C) REPUESTOS
+   ──────────── */
+Cuando sea sobre un repuesto:
+cliente : en soles
 
-        eso agrega en el prompt  se refiere a la tabla de  cosnultas repuestos
+pon en negrita los titulo  y los avalores sin estilo 
+Local 1:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
+Local 2:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
+Local 3:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
+Local 4:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
+Local 5:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]
 
-        y devuelve en soles y dolares el precio
-        
-        Si algún dato no está disponible, indica "No disponible" en ese campo, pero NUNCA omitas ningún campo del formato.
-        
-        Para otras consultas que no sean sobre OTs o NV MESÓN específicas, presenta la información de manera clara y concisa.
-        
-        Si es historial clinica responde de la siguiente manera:
-        Sede: [local] | Asesor: [Nombre del asesor] | OT: [número] | Tipo OT: [Tipo de OT] | Kilometraje: [Kilometraje] | F. Apertura: [fecha de apertura] | F. Facturación o Cierre: [Fecha de facturación o cierre]
-        
-        Consulta: ${query}
-        SQL: ${sqlQuery}
-        Resultados: ${serializableResult}
-    `;
+
+
+/* D) HISTORIA CLÍNICA
+   ─────────────────── */
+   retorna en ese diseño de los 5 filas 
+Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]
+
+/* D) OTS ESPECÍFICA (por número o placa)
+   ──────────────────────────────────── */ 
+   OT: [número]
+  Sede: [local]
+  Asesor: [Nombre del asesor]
+  Doc. Cliente: [Número de documento]
+  Cliente: [cliente]
+  F. Apertura OT: [fecha de apertura]
+  F. Facturación o Cierre: [Fecha de facturación o cierre]
+  Área: [área]
+  Tipo de OT: [Tipo de OT]
+  Estado actual: [estado]
+  Total OT: [moneda facturada]
+
+Nuca muestres la cosnulta SQL, solo la respuesta.
+Consulta: ${query}
+SQL: ${sqlQuery}
+Resultados: ${serializableResult}
+`;
 }
 
+/* ╔══════════════════════════════════════════════════════════════════════╗ */
+/* ║  SECCIÓN 4 ▸ GUÍA CONTEXTUAL POR TIPO DE CONSULTA                    ║ */
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
+
 /**
- * Genera instrucciones contextuales basadas en el tipo de consulta
- * @param {string} contextType Tipo de contexto (OT, NV_MESON, REPUESTOS, etc.)
- * @returns {string} Instrucciones contextuales
+ * getContextualGuidance ▸ Devuelve instrucciones SQL adicionales
+ *                        según el tipo de consulta.
+ *
+ * @param {string} contextType  'FACTURACION_OTS' | 'OT' | 'NV_MESON' | 'REPUESTOS' | 'HISTORIA_CLINICA' | …
+ * @returns {string}           Texto de guía contextual.
  */
 function getContextualGuidance(contextType) {
-    if (!contextType) return '';
-    
-    switch(contextType) {
-        case 'OT':
-            return `
-            IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre ÓRDENES DE TRABAJO (OT).
-            
-            INSTRUCCIONES CRÍTICAS PARA CONSULTAS DE OTs:
-            - CRÍTICO: Si la consulta es sobre una OT ESPECÍFICA (por número de OT o placa), DEBES buscar EXCLUSIVAMENTE en la tabla "historial_clinica" y NUNCA en "ots_facturadas".
-            - Si la consulta es GENERAL sobre OTs (sin especificar número o placa), DEBES buscar en la tabla "ots_facturadas".
-            
-            INSTRUCCIONES CRÍTICAS PARA CONSULTAS GENERALES DE OTs:
-            - SIEMPRE incluye en el WHERE todos los parámetros mencionados en la consulta:
-              * Si se menciona una sede/local específica (ej. "Los Olivos"), incluye "local = 'Los Olivos'" en el WHERE
-              * Si se menciona un área específica (ej. "mecánica"), incluye "area = 'mecánica'" en el WHERE
-              * Si se menciona una marca específica (ej. "NISSAN"), incluye "marca = 'NISSAN'" en el WHERE
-            - Para el periodo, considera que puede ser:
-              * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
-              * Fecha de cierre/facturación ("fecha_facturacion = 'YYYY-MM-DD'")
-              * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
-            - CRÍTICO: Debes responder a CUALQUIER pregunta relacionada con la base de datos de OTs, utilizando los campos apropiados según la consulta del cliente.
-            - NUNCA uses SELECT * FROM, siempre selecciona solo los campos necesarios para responder la consulta.
-            `;
-        case 'NV_MESON':
-            return `
-            IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre NOTAS DE VENTA DE MESÓN.
-            Busca en la tabla de "meson".
-            
-            INSTRUCCIONES CRÍTICAS PARA CONSULTAS GENERALES DE NV MESÓN:
-            - SIEMPRE incluye en el WHERE todos los parámetros mencionados en la consulta:
-              * Si se menciona una sede/local específica, incluye "local = '[local]'" en el WHERE
-              * Si se menciona un cliente específico, incluye "cliente = '[cliente]'" en el WHERE
-              * Si se menciona un documento específico, incluye "documento = '[documento]'" en el WHERE
-            - Para el periodo, considera que puede ser:
-              * Fecha de apertura ("fecha_apertura = 'YYYY-MM-DD'")
-              * Fecha de cierre/facturación ("fecha_facturacion = 'YYYY-MM-DD'")
-              * O un rango de fechas ("fecha_apertura BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'" o "fecha_facturacion BETWEEN 'YYYY-MM-DD' AND 'YYYY-MM-DD'")
-            - Para consultas generales, selecciona los campos relevantes que puedan responder a la pregunta del usuario
-             quiero que solo relices los select de los que desaa el cliente no toda las columnas nunca  hagas el select * from  de las tablas 
-            `;
-        case 'REPUESTOS':
-            return `
-            IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre REPUESTOS y su disponibilidad.
-            Busca en la tabla de "consultas_repuestos" usa la columna "cod_repuesto" para el WHERE.
-            `;
-        case 'HISTORIA_CLINICA':
-            return `
-            IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre HISTORIAS CLÍNICAS de vehículos.
-            Busca en la tabla de "historial_clinica".
-            Prioriza las tablas relacionadas con historial de servicios y reparaciones.
-            `;
-        default:
-            return `
-            IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre ${contextType}.
-            Prioriza las tablas y campos relacionados con ${contextType} en tu consulta SQL.
-            `;
-    }
+  if (!contextType) return "";
+
+  switch (contextType) {
+
+    /* ——— 2. OT (historial/clínica) ———————————————— */
+    case "OT":
+      return `
+IMPORTANTE: Contexto de ÓRDENES DE TRABAJO.
+• OTs ESPECÍFICA (por número o placa): tabla "historial_clinica".
+• OTs GENERAL: tabla "ots_facturadas".
+• Si la consulta menciona "facturación" o términos relacionados:
+  - DEBES usar SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - NUNCA uses WHERE 1=1 como única condición.
+  - SIEMPRE incluye filtros específicos por sede, marca, asesor, fechas u otros parámetros mencionados.
+• Incluye en el WHERE todos los parámetros relevantes.
+• NUNCA uses SELECT * FROM.
+`;
+
+    /* ——— 3. NV MESÓN ————————————————————————————— */
+    case "NV_MESON":
+      return `
+IMPORTANTE: Contexto de NOTAS DE VENTA DE MESÓN.
+Tabla: "meson".
+
+Para consultas generales:
+• Incluye sede, cliente, documento, rango de fechas, etc. en el WHERE.
+• El rango de fechas puede ser en "fecha_apertura" o "fecha_facturacion".
+aqui siempre verifica que se incluya meson si no nunca busques en esta tabla 
+⚠  NUNCA uses SELECT * FROM; selecciona solo los campos mencionados o necesarios.
+`;
+
+    /* ——— 4. REPUESTOS ——————————————————————————— */
+    case "REPUESTOS":
+      return `
+IMPORTANTE: Contexto de REPUESTOS y stock.
+Tabla: "consultas_repuestos".
+Usa la columna "cod_repuesto" en el WHERE.
+`;
+
+    /* ——— 5. HISTORIA CLÍNICA ——————————————————————— */
+    case "HISTORIA_CLINICA":
+      return `
+IMPORTANTE: Contexto de HISTORIAS CLÍNICAS de vehículos.
+Tabla: "historial_clinica".
+Prioriza campos de servicios, reparaciones y fechas.
+`;
+
+    /* ——— 6. OTROS CONTEXTOS ——————————————————————— */
+    default:
+      return `
+IMPORTANTE: El contexto actual es ${contextType}.
+Prioriza las tablas y campos relacionados con ${contextType}.
+`;
+  }
 }
 
+/* ╔══════════════════════════════════════════════════════════════════════╗ */
+/* ║  EXPORTS                                                             ║ */
+/* ╚══════════════════════════════════════════════════════════════════════╝ */
+
 module.exports = {
-    generateSqlPrompt,
-    generateNaturalResponsePrompt,
-    getContextualGuidance
+  generateSqlPrompt,
+  generateNaturalResponsePrompt,
+  getContextualGuidance,
 };

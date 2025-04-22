@@ -204,7 +204,7 @@ class EnhancedNaturalLanguageMySQLInterface {
     analyzeConversationContext(conversationHistory) {
         // Tipos de consulta que podemos detectar
         const queryTypes = {
-            OT: ['ot', 'orden de trabajo', 'orden trabajo', 'servicio', 'asesor', 'asesores'],
+            OT: ['ots', 'orden de trabajo', 'orden trabajo', 'servicio', 'asesor', 'asesores'],
             NV_MESON: ['nv', 'nota de venta', 'mesón', 'meson', 'repuesto vendido'],
             REPUESTOS: ['repuesto', 'stock', 'inventario', 'disponibilidad'],
             HISTORIA_CLINICA: ['historia', 'clínica', 'historial', 'reparaciones']
@@ -248,18 +248,43 @@ class EnhancedNaturalLanguageMySQLInterface {
      * @param {string} query Consulta en lenguaje natural
      * @param {number} maxResults Número máximo de resultados a mostrar
      * @param {Array} conversationHistory Historial de conversación para contexto
+     * @param {Object} queryParams Parámetros estructurados de la consulta (opcional)
      * @returns {Promise<Object>} Respuesta procesada
      */
-    async processNaturalLanguageQuery(query, maxResults = 10, conversationHistory = []) {
-        // Analizar el contexto de la conversación si está disponible
-        if (conversationHistory && conversationHistory.length > 0) {
+    async processNaturalLanguageQuery(query, maxResults = 10, conversationHistory = [], queryParams = null) {
+        // Si no tenemos un contexto establecido y hay historial, analizarlo
+        if (!this.getQueryContext() && conversationHistory && conversationHistory.length > 0) {
             this.analyzeConversationContext(conversationHistory);
+        }
+        
+        // Enriquecer la consulta con los parámetros estructurados si están disponibles
+        let enrichedQuery = query;
+        if (queryParams) {
+            // Construir una consulta enriquecida con los parámetros explícitos
+            const paramParts = [];
+            
+            if (queryParams.placa) paramParts.push(`placa: ${queryParams.placa}`);
+            if (queryParams.numero_ot) paramParts.push(`número de OT: ${queryParams.numero_ot}`);
+            if (queryParams.numero_nv) paramParts.push(`número de NV: ${queryParams.numero_nv}`);
+            if (queryParams.asesor) paramParts.push(`asesor: ${queryParams.asesor}`);
+            if (queryParams.sede) paramParts.push(`sede: ${queryParams.sede}`);
+            if (queryParams.marca) paramParts.push(`marca: ${queryParams.marca}`);
+            if (queryParams.fecha_inicio) paramParts.push(`desde: ${queryParams.fecha_inicio}`);
+            if (queryParams.fecha_fin) paramParts.push(`hasta: ${queryParams.fecha_fin}`);
+            if (queryParams.tipo_fecha) paramParts.push(`tipo de fecha: ${queryParams.tipo_fecha}`);
+            if (queryParams.cod_repuesto) paramParts.push(`código de repuesto: ${queryParams.cod_repuesto}`);
+            
+            if (paramParts.length > 0) {
+                enrichedQuery = `${query}. Parámetros adicionales: ${paramParts.join(', ')}`;
+            }
+            
+            console.log(`Consulta enriquecida con parámetros: ${enrichedQuery}`);
         }
         
         // Registrar el contexto actual para depuración
         console.log(`Procesando consulta con contexto: ${this.getQueryContext() || 'No hay contexto específico'}`);
         
-        const sqlQuery = await this.generateSqlQuery(query);
+        const sqlQuery = await this.generateSqlQuery(enrichedQuery);
         const queryResult = await this.executeQuery(sqlQuery);
         const serializableResult = this.makeSerializable(queryResult);
         

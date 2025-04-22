@@ -1,9 +1,11 @@
-const { getOpenAIResponse } = require('../../services/openaiService.js');
+const { getOpenAIResponse }   = require('../../services/openaiService.js');
 const { getConversationFlowsText } = require('../../model/conversationFlows.js');
-const { processQuery } = require('../flujos/consultas/querysController.js');
-const { processChartRequest } = require('../flujos/graficas/chartController');
+const { processQuery }        = require('../flujos/consultas/querysController.js');
+const { processChartRequest } = require('../flujos/graficas/chartController.js');
+
 const conversationState = new Map();
 
+/* ─────────── Helpers ─────────── */
 function getOrCreateConversationState(sender) {
   let state = conversationState.get(sender);
   if (!state) {
@@ -17,208 +19,154 @@ function getOrCreateConversationState(sender) {
 function obtenerFechaHoraActual() {
   const ahora = new Date();
   return {
-    año: ahora.getFullYear(),
-    mes: ahora.getMonth() + 1,
-    dia: ahora.getDate(),
+    año:  ahora.getFullYear(),
+    mes:  ahora.getMonth() + 1,
+    dia:  ahora.getDate(),
     hora: ahora.getHours().toString().padStart(2, '0'),
     minuto: ahora.getMinutes().toString().padStart(2, '0')
   };
 }
 
+function flattenConversation(messages) {
+  return messages
+    .map(m => `${m.role === 'user' ? 'U' : 'A'}: ${m.content}`)
+    .join('\n');
+}
 
-async function processWithOpenAI(message, sender, nombreCliente) {
-  // Obtener o crear el estado de conversación para este remitente
-   const state = getOrCreateConversationState(sender);
-  
-  
-  const fechaHoraActual = obtenerFechaHoraActual();
-  const fechaActualISO = `${fechaHoraActual.año}-${String(fechaHoraActual.mes).padStart(2, '0')}-${String(fechaHoraActual.dia).padStart(2, '0')}`;
-  const hora = `${fechaHoraActual.hora}:${fechaHoraActual.minuto}`;
+/* ─────────── Controlador ─────────── */
+async function processWithOpenAI(message, sender) {
+  const state = getOrCreateConversationState(sender);
 
+  /* ── prompt del sistema (añadimos instrucción de "contexto") ── */
+  const { año, mes, dia, hora, minuto } = obtenerFechaHoraActual();
   const systemPrompt = `
-
-**Fecha actual:** ${fechaActualISO}
-**Hora actual:** ${hora}
-
-**Servicios Disponibles:**
-
-
-**Precios:**
-
-
-**Seguridad:**
-
-
-**Restricciones importantes:**
-🔴 SOLO responde a preguntas relacionadas a las conultas no de otras areas ni de musica ni infomaciones generales 
-
-**CRÍTICO: SIEMPRE debes incluir la información en formato JSON al final del mensaje cuando detectes una consulta específica, precedida por "===CONULTAR_DATOS_SIGMA===":*
-
-**Instrucciones para consultas específicas:**
-Cuando un cliente solicite información relacionada a alguna de estas categorías, DEBES OBLIGATORIAMENTE incluir el formato JSON para consultar la base de datos, incluso si el mensaje no contiene un saludo previo. NO menciones al usuario que estás generando un JSON:
-
-1. **Seguimiento Facturación OTs y Mesón**: Cuando pregunten sobre el estado de facturación, pagos pendientes o historial de facturación.
-   Ejemplo: "¿Cuál es el estado de facturación de la OT 12345?" o "cuantas asesores hay en ots facturadas"
-   IMPORTANTE: SIEMPRE genera el JSON para este tipo de consultas, incluso si son preguntas directas sin saludo.
-
-2. **Consulta por OT**: Cuando pregunten por una Orden de Trabajo específica por su número.
-   Ejemplo: "Necesito información sobre la OT 54321" o "¿En qué estado está mi orden 54321?"
-
-3. **Consulta por NV Mesón**: Cuando pregunten por una Nota de Venta de Mesón.
-   Ejemplo: "¿Puedes verificar la nota de venta 98765?" o "Quiero saber el detalle de mi NV 98765"
-
-4. **Consulta de stock de repuestos**: Cuando pregunten por disponibilidad de repuestos.
-   Ejemplo: "¿Tienen disponible el repuesto XYZ-123?" o "Necesito saber si hay stock del componente ABC"
-
-5. **Historia clínica**: Cuando soliciten el historial de servicios o reparaciones.
-   Ejemplo: "¿Cuál es el historial de reparaciones del cliente Juan Pérez?" o "Necesito la historia clínica del vehículo con placa ABC-123"
-
-6. **Generación de gráficas**: Cuando soliciten visualizar datos en forma de gráfica.
-   Ejemplo: "Muéstrame una gráfica de las ventas por mes" o "Necesito un gráfico de pastel con los repuestos más vendidos"
-
-===CONULTAR_DATOS_SIGMA===
-{
-  "message": "consulta_detectada",
-  "tipo": "[tipo_de_consulta]"
-}
-
-**Cuando detectes una solicitud de gráfica, ya sea por ejemplo quiero grafica o algo relacionado si encaso no identifiques grafica no devulvas ese json, incluye la información en formato JSON al final del mensaje, precedida por "===GENERAR_GRAFICA_SIGMA===":*
-===GENERAR_GRAFICA_SIGMA===
-{
-  "message": "grafica_solicitada",
-  "query": "[consulta_para_datos]",
-  "chartType": "[tipo_de_grafica]",
-  "title": "[titulo_opcional]"
-}
-
-Para el campo chartType, usa 'bar' para gráficas de barras o 'pie' para gráficas de pastel.
-Ejemplos de solicitudes de gráficas:
-- "Muéstrame una gráfica de barras con las OTs por asesor"
-- "Genera un gráfico de pastel con los repuestos más vendidos"
-- "Quiero ver una gráfica de las ventas por mes"
-- "Necesito visualizar en una gráfica la distribución de OTs por estado"
-${getConversationFlowsText()}
-`.trim();
+  **Fecha actual:** \${año}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}
+  **Hora actual:** \${hora}:${minuto}
+  
+  **Servicios Disponibles:**
+  - Seguimiento Facturación OTs
+  - Seguimiento Facturación Mesón
+  - Consulta por OT
+  - Consulta por NV Mesón
+  - Consulta de stock de repuestos
+  - Historia clínica
+  - Generación de gráficas (bar | pie)
+  
+  **Restricciones importantes:**
+  🔴 SOLO responde a preguntas relacionadas con las consultas anteriores.  
+  🔴 NO converses sobre temas de música ni información general.
+  
+  **CRÍTICO – Detección de consultas específicas**  
+  Cuando identifiques una consulta *válida*, termina tu respuesta con el bloque en contexto debe de ir las consulats que se reliza debes de ahcer un reumen y enviar las preguntas en contexto: 
+  
+  ===CONULTAR_DATOS_SIGMA===
+  {
+    "message": "consulta_detectada",
+    "tipo": "[tipo_de_consulta]",
+    "contexto": "<TODO EL HISTORIAL EN TEXTO PLANO – hasta 4 KB>"
+  }
+  
+  *El campo **contexto** debe contener todo lo conversado pero resume recuerda que eres una sistente que brinda informacion para reponder consultas 
+  
+  
+  **CRÍTICO – Detección de solicitudes de gráficas**  
+  Si el usuario pide una gráfica, termina con:
+  
+  ===GENERAR_GRAFICA_SIGMA===
+  {
+    "message": "grafica_solicitada",
+    "query":   "[consulta_para_datos]",
+    "chartType": "[bar|pie]",
+    "title":     "[título_opcional]"
+  }
+  
+  Para *chartType* usa **bar** (barras) o **pie** (pastel).
+  
+  ${getConversationFlowsText()}
+  `.trim();
+  
 
   const messagesForOpenAI = [
-    { role: "system", content: systemPrompt },
+    { role: 'system', content: systemPrompt },
     ...state.messages,
-    { role: "user", content: message }
+    { role: 'user', content: message }
   ];
 
   const response = await getOpenAIResponse(messagesForOpenAI);
-  
-  // Procesar la respuesta de OpenAI
-  let cleanResponse = response;
-  try {
 
-    if (response.includes("===CONULTAR_DATOS_SIGMA===")) {
-      console.log("Detectada consulta en formato JSON");
-      const jsonStartIndex = response.indexOf("===CONULTAR_DATOS_SIGMA===") + "===CONULTAR_DATOS_SIGMA===".length;
-      const jsonString = response.substring(jsonStartIndex).trim();
-      
-      try {
-        const jsonData = JSON.parse(jsonString);
-        console.log("Datos JSON extraídos:", jsonData);
-       
-        if (jsonData && jsonData.message === "consulta_detectada" && jsonData.tipo) {
-          console.log("Tipo de consulta detectada:", jsonData.tipo);
-          
-          // Procesar la consulta usando el tipo detectado
-          const queryResult = await processQuery(message, sender);
-          
-          if (queryResult.success) {
-            // No guardamos aquí los mensajes en el historial, lo haremos al final de la función
-            cleanResponse = queryResult.response;
-            // Indicamos que ya se procesó este mensaje para evitar duplicación
-            state.lastProcessedMessage = message;
-          }
-        }
-      } catch (jsonError) {
-        console.error("Error al parsear JSON de la respuesta:", jsonError);
+  /* ── Procesamiento ── */
+  let cleanResponse = response;
+
+  try {
+    /* ---------- CONSULTAR_DATOS_SIGMA ---------- */
+    if (response.includes('===CONULTAR_DATOS_SIGMA===')) {
+      const jsonStart = response.indexOf('===CONULTAR_DATOS_SIGMA===') + '===CONULTAR_DATOS_SIGMA==='.length;
+      const jsonData  = JSON.parse(response.slice(jsonStart).trim());
+
+      /* Aseguramos contexto */
+      if (!jsonData.contexto) {
+        jsonData.contexto = flattenConversation([
+          ...state.messages,
+          { role: 'user', content: message }
+        ]);
       }
-    } else if (response.includes("===GENERAR_GRAFICA_SIGMA===")) {
-      console.log("Detectada solicitud de gráfica en formato JSON");
-      const jsonStartIndex = response.indexOf("===GENERAR_GRAFICA_SIGMA===") + "===GENERAR_GRAFICA_SIGMA===".length;
-      const jsonString = response.substring(jsonStartIndex).trim();
-      
-      try {
-        const jsonData = JSON.parse(jsonString);
-        console.log("Datos de gráfica extraídos:", jsonData);
-        
-        if (jsonData && jsonData.message === "grafica_solicitada") {
-          console.log("Solicitud de gráfica detectada:", jsonData.query);
-          
-          cleanResponse = "Estoy generando la gráfica solicitada. Te la enviaré en un momento...";
-          
-          // Indicamos que ya se procesó este mensaje para evitar duplicación
+
+      if (jsonData.message === 'consulta_detectada' && jsonData.tipo) {
+        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como “message” */
+        const queryResult = await processQuery(jsonData.contexto, sender);
+
+        if (queryResult.success) {
+          cleanResponse = queryResult.response;
           state.lastProcessedMessage = message;
-          
-          // Procesar la solicitud de gráfica en segundo plano
-          setTimeout(async () => {
-            try {
-              // Procesar la solicitud de gráfica usando el controlador
-              await processChartRequest(
-                jsonData.query,
-                sender,
-                jsonData.chartType || 'bar',
-                jsonData.title || ''
-              );
-              console.log("Gráfica procesada y enviada exitosamente");
-            } catch (error) {
-              console.error("Error al procesar gráfica en segundo plano:", error);
-            }
-          }, 100);
-          
-          return cleanResponse;
         }
-      } catch (jsonError) {
-        console.error("Error al parsear JSON de la solicitud de gráfica:", jsonError);
       }
     }
-  } catch (error) {
-    console.error("Error al procesar respuesta OpenAI:", error);
-    cleanResponse = "Lo siento, hubo un problema al procesar tu solicitud. Por favor, intenta de nuevo.";
+
+    /* ---------- GENERAR_GRAFICA_SIGMA ---------- */
+    else if (response.includes('===GENERAR_GRAFICA_SIGMA===')) {
+      const jsonStart = response.indexOf('===GENERAR_GRAFICA_SIGMA===') + '===GENERAR_GRAFICA_SIGMA==='.length;
+      const jsonData  = JSON.parse(response.slice(jsonStart).trim());
+
+      if (jsonData.message === 'grafica_solicitada') {
+        cleanResponse = 'Estoy generando la gráfica solicitada. Te la enviaré en un momento…';
+        setTimeout(() =>
+          processChartRequest(
+            jsonData.query,
+            sender,
+            jsonData.chartType || 'bar',
+            jsonData.title     || ''
+          ), 100);
+        return cleanResponse;
+      }
+    }
+  } catch (err) {
+    console.error('Error al procesar respuesta OpenAI:', err);
+    cleanResponse = 'Lo siento, hubo un problema al procesar tu solicitud. Por favor, inténtalo de nuevo.';
   }
 
-  // Solo agregamos los mensajes al historial si no se han procesado ya
+  /* ── Actualiza historial ── */
   if (state.lastProcessedMessage !== message) {
-    state.messages.push({ role: "user", content: message });
-    state.messages.push({ role: "assistant", content: cleanResponse });
+    state.messages.push({ role: 'user', content: message });
+    state.messages.push({ role: 'assistant', content: cleanResponse });
     if (state.messages.length > 10) state.messages = state.messages.slice(-10);
   } else {
-    // Si ya se procesó, solo actualizamos el último mensaje del asistente
-    if (state.messages.length > 0) {
-      // Actualizamos el último mensaje del asistente si existe
-      const lastMessageIndex = state.messages.findIndex(msg => msg.role === "assistant");
-      if (lastMessageIndex !== -1) {
-        state.messages[lastMessageIndex].content = cleanResponse;
-      } else {
-        // Si no hay mensaje del asistente, agregamos los mensajes normalmente
-        state.messages.push({ role: "user", content: message });
-        state.messages.push({ role: "assistant", content: cleanResponse });
-        if (state.messages.length > 10) state.messages = state.messages.slice(-10);
-      }
-    }
+    const idx = state.messages.findIndex(m => m.role === 'assistant');
+    if (idx !== -1) state.messages[idx].content = cleanResponse;
   }
-  
-  // Limpiamos la marca de mensaje procesado para la próxima consulta
   state.lastProcessedMessage = null;
 
   return cleanResponse;
 }
 
+/* ── Exports ── */
 module.exports = {
   getResponseText: async (type, message, sender) => {
     try {
-      console.log("Mensaje recibido:", message);
-      console.log("Sender:", sender);
-      return await processWithOpenAI(message, sender, null);
-    } catch (error) {
-      console.error("Error:", error);
-      return "Lo siento, algo salió mal. ¿Puedes intentarlo de nuevo?";
+      return await processWithOpenAI(message, sender);
+    } catch (err) {
+      console.error('Error:', err);
+      return 'Lo siento, algo salió mal. ¿Puedes intentarlo de nuevo?';
     }
   },
-  // Exportar la función para acceder al estado de conversación
   getOrCreateConversationState
-}
+};
