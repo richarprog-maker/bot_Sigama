@@ -63,7 +63,7 @@
         'CRÍTICO: Si menciona “OTS” sin especificar tipo[ots facturado u ots general], pregunta: "¿Consulta GENERAL o ESPECÍFICA de OTs?"',
 
         /* OT específica */
-        'Para OT ESPECÍFICA, determina si se envió PLACA (6 caracteres) o NÚMERO.',
+        'Para OT ESPECÍFICA, determina si se envió PLACA (6 caracteres) o NÚMERO si es distintoa 6 caraceres. ya no preguntes que te especifique',
         'Si falta placa o número, solicítalo.',
 
         /* OT general */
