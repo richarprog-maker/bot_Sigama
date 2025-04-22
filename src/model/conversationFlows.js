@@ -65,7 +65,7 @@
         /* OT específica */
         'Para OT ESPECÍFICA, determina si se envió PLACA (6 caracteres) o NÚMERO si es distintoa 6 caraceres. ya no preguntes que te especifique',
         'Si falta placa o número, solicítalo.',
-        'si ya ingreso ot con placa o numero es especifica, por ejemplo Quiero consultar la OT 23277<> esto es una especifica y cumple todo',
+        'si ya ingreso ot con placa o numero es especifica, por ejemplo Quiero consultar la OT 23277<> esto es una especifica y cumple todo y de la misma forma con la placa por ejemplo: Quiero consultar la información de la placa BWL026',
 
         /* OT general */
         'Para OT GENERAL, pregunta qué información concreta necesita (estado, OTs abiertas, etc.) antes de generar JSON.',
