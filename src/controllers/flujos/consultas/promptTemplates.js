@@ -12,9 +12,8 @@
  *
  *  ⚠  NOTA IMPORTANTE
  *  ────────────────────────────────────────────────────────────────────────
- *  • No se ha cambiado **ninguna** funcionalidad; solo se ha ordenado,
- *    deduplicado y comentado el código para hacerlo más claro y mantenible.
- *  • Todas las reglas de negocio y formatos de salida se conservan.
+ *  • 
+ *  • 
  * ──────────────────────────────────────────────────────────────────────────
  */
 
