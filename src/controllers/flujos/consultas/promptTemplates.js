@@ -74,6 +74,8 @@ Si la consulta menciona "meson", "NV", "nota de venta de mesón"
     - Si es una consulta general, incluye TODOS los parámetros (sede, cliente, fechas, etc.) en el WHERE.
     - Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
   • IMPORTANTE: Si la consulta incluye un número_nv específico, SIEMPRE úsalo en el WHERE.
+  • IMPORTANTE: Si la consulta incluye asesor , SIEMPRE úsalo en el WHERE el like y lo mismo par ala marca.
+
 
 /* REPUESTOS */
 Si la consulta es sobre repuestos
@@ -99,13 +101,14 @@ Si la consulta menciona "ots general",
   - NUNCA uses WHERE 1=1 sin condiciones adicionales.
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
 • IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
+• IMPORTANTE: Si la consulta incluye asesor , SIEMPRE úsalo en el WHERE el like y lo mismo par ala marca.
 
 /* PARÁMETROS ESPECÍFICOS */
 Si la consulta incluye parámetros específicos como:
 - placa: Úsala en el WHERE para filtrar por vehículo
-- asesor: Úsalo en el WHERE para filtrar por asesor
-- sede: Úsala en el WHERE para filtrar por local
-- marca: Úsala en el WHERE para filtrar por marca
+- asesor: Úsalo en el WHERE para filtrar por asesor usa Like para filtrar por nombre del asesor
+- sede: Úsala en el WHERE para filtrar por local usa LIKE para filtrar por nombre del local o sede.
+- marca: Úsala en el WHERE para filtrar por marca usa LIKE
 - fecha_inicio y fecha_fin: Úsalas para filtrar por rango de fechas
 - tipo_fecha: Determina si el filtro de fechas aplica a "fecha_apertura" o "fecha_facturacion"
 
@@ -161,7 +164,10 @@ ${RESPONSE_BLOCK_RULES}
 
 /* B) NV MESÓN
    ─────────── */
+   
 • NV ESPECÍFICA (por número):
+ Cada campo **título** debe ir en negrita usando asteriscos: *Título:*
+ - Cada **campo en una línea distinta**.
   Por supuesto. Aquí tienes la información de la NV MESÓN [número]:
   NV: [número]
   Doc. Cliente: [doc_cliente]
@@ -180,28 +186,37 @@ ${RESPONSE_BLOCK_RULES}
    ──────────── */
 Cuando sea sobre un repuesto:
 cliente : en soles
+formatea la siguiente información para que se vea ordenada en WhatsApp. Asegúrate de que cada campo *título* esté en negrita usando asteriscos *Título:* y que los valores se escriban inmediatamente después del título, sin formato adicional. Cada campo debe estar en una línea distinta y debe haber una línea en blanco entre los registros para separarlos visualmente. Usa exactamente este orden de campos:
+Ejemplo de salida:
 
-pon en negrita los titulo  y los avalores sin estilo y cada fil haga un salto de linea 
-Local 1:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
-Local 2:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
-Local 3:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
-Local 4:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
-Local 5:  Stock disponible:[stock]- Ubicación: [ubicación] Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos) ICC: [ICC]\n
+Local [nombre del local]:
 
-
+Stock disponible: [stock]
+Ubicación: [ubicación]
+Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos)
+ICC: [ICC]
 
 /* D) HISTORIA CLÍNICA
    ─────────────────── */
-   retorna en ese diseño de los 5 filas  pon en negrita los titulo  y los avalores sin estilo y cada fil haga un salto de linea 
-Sede: [fecha] | Asesor:[Nombre del asesor] | OT: [OT] |Tipo OT: [moneda] | Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
-Sede: [fecha] | Asesor: [Nombre del asesor] | OT: [OT] |Tipo OT: [moneda]| Kilometraje: [Kilometraje] | F. Factura: [fecha] | F. Facturación o cierre: [fecha]\n
+ Cada campo **título** debe ir en negrita usando asteriscos: *Título:*
+- El **valor** se escribe inmediatamente después del título, sin formato adicional.
+- Cada **campo en una línea distinta**.
+- Deja **una línea en blanco** entre registros para separarlos visualmente.
+- Usa exactamente este orden de campos:
+  1. Sede
+  2. Asesor
+  3. OT
+  4. Tipo OT
+  5. Kilometraje
+  6. F. Factura
+  7. F. Facturación o cierre
 
+  asi para los 5 filas 
 /* D) OTS ESPECÍFICA (por número o placa)
    ──────────────────────────────────── */ 
-   OT: [número]
+  Cada campo **título** debe ir en negrita usando asteriscos: *Título:*
+  - Cada **campo en una línea distinta**.
+  OT: [número]
   Sede: [local]
   Asesor: [Nombre del asesor]
   Doc. Cliente: [Número de documento]

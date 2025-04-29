@@ -11,7 +11,7 @@ const promptTemplates = require('./promptTemplates.js');
 class EnhancedNaturalLanguageMySQLInterface {
     constructor() {
         this._schemaCache = null;
-        this.queryHistory = [];
+        // Eliminamos completamente el historial para evitar confusiones
         this.currentQueryContext = null;
     }
 
@@ -115,7 +115,7 @@ class EnhancedNaturalLanguageMySQLInterface {
                 throw new Error("Consulta potencialmente peligrosa detectada");
             }
             
-            this.queryHistory.push({ query: naturalQuery, sql: sqlQuery });
+            // No almacenamos historial para evitar confusiones en consultas futuras
             return sqlQuery;
         } catch (error) {
             logger.error(`Error generando SQL: ${error.message}`);
@@ -288,10 +288,8 @@ class EnhancedNaturalLanguageMySQLInterface {
         const queryResult = await this.executeQuery(sqlQuery);
         const serializableResult = this.makeSerializable(queryResult);
         
-        // Guardar el tipo de consulta en el historial
-        const queryType = this.getQueryContext() || 'GENERAL';
-        this.queryHistory.push({ query, sql: sqlQuery, type: queryType });
-        console.log(`Consulta guardada en historial con tipo: ${queryType}`);
+        // No almacenamos historial para evitar confusiones en consultas futuras
+        console.log(`Consulta procesada con tipo: ${this.getQueryContext() || 'GENERAL'}`);
         
         if (serializableResult.success && serializableResult.results.length > maxResults) {
             serializableResult.results = serializableResult.results.slice(0, maxResults);
@@ -344,10 +342,11 @@ class EnhancedNaturalLanguageMySQLInterface {
 
     /**
      * Devuelve el historial de consultas
-     * @returns {Array} Historial de consultas
+     * @returns {Array} Historial de consultas vacío
      */
     getQueryHistory() {
-        return this.queryHistory;
+        // Siempre devolvemos un array vacío ya que no almacenamos historial
+        return [];
     }
 }
 

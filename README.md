@@ -57,7 +57,7 @@ Esta guía detalla los flujos de conversación para el Bot Sigma, un asistente v
 
 | Actor | Mensaje | Notas |
 |-------|---------|-------|
-| **Cliente** | ¿Cuánto ha facturado en total en [moneda] el asesor [nombre del asesor] en [periodo] para [marca]? | MONEDA y sin especificar LOCAL |
+| **Cliente** | ¿Cuánto ha facturado en total en [moneda] el asesor VALERIA YOLANDA DIAZ en  el mes de diciembre de 2024 para  la marca de SUZUKI? | MONEDA y sin especificar LOCAL |
 | **Bot (Sigma)** | El asesor [nombre del asesor] ha generado una facturación total de [moneda] (Sin impuestos) en [periodo]. | |
 
 #### Consultas por Monto Facturado

@@ -72,7 +72,8 @@ async function processQuery(queryData, sender) {
 
 
 function getQueryHistory() {
-    return queryService.getQueryHistory();
+    // Siempre devolvemos un array vacío ya que no almacenamos historial
+    return [];
 }
 
 
