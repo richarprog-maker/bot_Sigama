@@ -52,6 +52,7 @@ const conversationFlows = {
       '- SOLO SI DETECTAS EXPLÍCITAMENTE UNA FECHA, MES, AÑO O RANGO DE FECHAS en el mensaje Y NO SE ESPECIFICA EL TIPO DE FECHA, PREGUNTA: "¿Desea consultar por fecha de APERTURA o fecha de FACTURACIÓN?" antes de generar el JSON.',
       'CRÍTICO: Diferencia entre CONSULTA OT y HISTORIA CLÍNICA:',
       '- SOLO considera HISTORIA CLÍNICA cuando el usuario mencione EXPLÍCITAMENTE las palabras "historial" o "historia clínica". En cualquier otro caso, incluso si proporciona una placa, trátalo como CONSULTA OT ESPECÍFICA.',
+      'CRÍTICO: Si el usuario menciona "tipo repuestos" o consulta por facturación/montos de "repuestos" sin referirse al stock o disponibilidad, trátalo como CONSULTA OT GENERAL donde se filtra por la columna "tipo" con valor "REPUESTOS" en la tabla "ots_facturadas", NO como una consulta de repuestos.',
       'Si menciona "OTS" sin especificar tipo, pregunta: "¿Consulta GENERAL o ESPECÍFICA de OTs?"',
       'Para OT ESPECÍFICA, determina si se envió PLACA (6 caracteres) o NÚMERO (distinto a 6 caracteres).',
       'Si falta placa o número, solicítalo.', 
@@ -71,7 +72,11 @@ const conversationFlows = {
     id: 4,
     name: 'CONSULTA DE REPUESTOS',
     instructions: [
-      'CRÍTICO: Si el mensaje ya trae código de repuesto, procede; de lo contrario, pídeselo.'
+      'CRÍTICO: Si el mensaje ya trae código de repuesto, procede; de lo contrario, pídeselo.',
+      'IMPORTANTE: Diferencia entre CONSULTA DE REPUESTOS y CONSULTA DE OTs POR TIPO REPUESTOS:',
+      '- CONSULTA DE REPUESTOS: Se refiere a consultas sobre stock, disponibilidad o información de un repuesto específico → usa tabla "consultas_repuestos".',
+      '- CONSULTA DE OTs POR TIPO REPUESTOS: Si preguntan por "cuánto he facturado en tipo repuestos" o similar, esto NO es una consulta de repuestos sino una CONSULTA DE OTs GENERAL donde se filtra por la columna "tipo" con valor "REPUESTOS" → usa tabla "ots_facturadas".',
+      'CRÍTICO: Si detectas que la consulta es sobre facturación o montos de tipo "repuestos", trátala como CONSULTA OT GENERAL y genera el JSON correspondiente.'
     ]
   },
 

@@ -79,10 +79,14 @@ Si la consulta menciona "meson", "NV", "nota de venta de mesón"
 
 
 /* REPUESTOS */
-Si la consulta es sobre repuestos
+Si la consulta es sobre stock, disponibilidad o información de un repuesto específico
   → tabla a usar: "consultas_repuestos".
   • Usa la columna "cod_repuesto" en el WHERE.
   • IMPORTANTE: Si la consulta incluye un cod_repuesto específico, SIEMPRE úsalo en el WHERE del codigo de repuesto  y limit 5 .
+
+/* IMPORTANTE: DIFERENCIA ENTRE CONSULTAS */
+• Si la consulta menciona "cuánto he facturado en tipo repuestos" o similar, NO es una consulta de repuestos sino una CONSULTA DE OTs GENERAL donde se filtra por la columna "tipo" con valor "REPUESTOS" → usa tabla "ots_facturadas".
+• CRÍTICO: Las consultas sobre facturación o montos de "repuestos" deben tratarse como consultas de OTs generales, no como consultas de stock de repuestos.
 
 
 /* OTs */
@@ -297,7 +301,14 @@ Para consultas generales:
 IMPORTANTE: Contexto de REPUESTOS y stock.
 Tabla: "consultas_repuestos".
 Usa la columna "cod_repuesto" en el WHERE.
+
+CRÍTICO: Diferencia entre consultas:
+• CONSULTA DE REPUESTOS: Se refiere a consultas sobre stock, disponibilidad o información de un repuesto específico.
+• CONSULTA DE OTs POR TIPO REPUESTOS: Si preguntan por "cuánto he facturado en tipo repuestos" o similar, esto NO es una consulta de repuestos sino una CONSULTA OT GENERAL donde se filtra por la columna "tipo" con valor "REPUESTOS" en la tabla "ots_facturadas".
+
+Si detectas que la consulta es sobre facturación o montos de tipo "repuestos", trátala como CONSULTA OT GENERAL y usa la tabla "ots_facturadas".
 `;
+
 
     /* ——— 5. HISTORIA CLÍNICA ——————————————————————— */
     case "HISTORIA_CLINICA":
