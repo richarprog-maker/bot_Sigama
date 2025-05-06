@@ -75,6 +75,7 @@ Si la consulta menciona "meson", "NV", "nota de venta de mesón"
     - Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
   • IMPORTANTE: Si la consulta incluye un número_nv específico, SIEMPRE úsalo en el WHERE.
   • IMPORTANTE: Si la consulta incluye asesor , SIEMPRE úsalo en el WHERE el like y lo mismo par ala marca.
+  • IMPORTANTE: si detectas la consulta o query de COUNT haz el count
 
 
 /* REPUESTOS */
@@ -83,16 +84,11 @@ Si la consulta es sobre repuestos
   • Usa la columna "cod_repuesto" en el WHERE.
   • IMPORTANTE: Si la consulta incluye un cod_repuesto específico, SIEMPRE úsalo en el WHERE del codigo de repuesto  y limit 5 .
 
-/* HISTORIA CLÍNICA */
-Si la consulta es sobre historial clínico
-  → tabla a usar: "historial_clinica".
-  • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
-  . Siempre rezliza el limit 5 
 
 /* OTs */
 Si la consulta menciona "ots general",
   → tabla a usar: "ots_facturadas".
-• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica" solo devuelve una fila.
+• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica", SIEMPRE usa LIMIT 1 para devolver una sola fila.
 • OTs GENERAL                         → tabla "ots_facturadas".
 • Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna tipo
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
@@ -102,7 +98,14 @@ Si la consulta menciona "ots general",
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
 • IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
 • IMPORTANTE: Si la consulta incluye asesor , SIEMPRE úsalo en el WHERE el like y lo mismo par ala marca.
+• IMPORTANTE: Si la consulta incluye "MEC" no completar a mecanica o al contrario si detectas mecanica para el where usa el valor de "MEC" , SIEMPRE úsalo en el WHERE con la columan de area.
 
+/* HISTORIA CLÍNICA */
+Si la consulta es sobre historial clínico
+  → tabla a usar: "historial_clinica".
+  • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
+  • Si la consulta incluye la palabra "historial" o "historia clínica", usa LIMIT 5.
+  
 /* PARÁMETROS ESPECÍFICOS */
 Si la consulta incluye parámetros específicos como:
 - placa: Úsala en el WHERE para filtrar por vehículo
@@ -198,24 +201,28 @@ ICC: [ICC]
 
 /* D) HISTORIA CLÍNICA
    ─────────────────── */
- Cada campo **título** debe ir en negrita usando asteriscos: *Título:*
-- El **valor** se escribe inmediatamente después del título, sin formato adicional.
-- Cada **campo en una línea distinta**.
-- Deja **una línea en blanco** entre registros para separarlos visualmente.
-- Usa exactamente este orden de campos:
-  1. Sede
-  2. Asesor
-  3. OT
-  4. Tipo OT
-  5. Kilometraje
-  6. F. Factura
-  7. F. Facturación o cierre
+Aquí tienes el historial de las últimas 5 visitas para la placa [número] en un solo mensaje:
 
-  asi para los 5 filas 
+Formatea la información de la siguiente manera:
+- Cada registro debe tener todos los campos en un formato ordenado.
+- Usa asteriscos para poner en negrita los títulos: *Título:* Valor
+- Numera cada registro (1, 2, 3, 4, 5) para diferenciarlos claramente.
+- Incluye todos los campos en cada registro en este orden exacto:
+  *Sede:* [sede]\n
+  *Asesor:* [asesor]\n
+  *OT:* [número_ot]\n
+  *Tipo OT:* [tipo_ot]\n
+  *Kilometraje:* [kilometraje]\n
+  *F. Factura:* [fecha_factura]\n
+  *F. Facturación o cierre:* [fecha_facturacion]\n
+
+Todos los registros deben estar en un ÚNICO mensaje continuo, separados visualmente pero formando parte del mismo bloque de texto.
+
 /* D) OTS ESPECÍFICA (por número o placa)
    ──────────────────────────────────── */ 
-  Cada campo **título** debe ir en negrita usando asteriscos: *Título:*
+  Cada campo **título** debe ir en negrita usando asteriscos: 
   - Cada **campo en una línea distinta**.
+
   OT: [número]
   Sede: [local]
   Asesor: [Nombre del asesor]
@@ -226,7 +233,7 @@ ICC: [ICC]
   Área: [área]
   Tipo de OT: [Tipo de OT]
   Estado actual: [estado]
-  Total OT: [moneda facturada]
+  Total OT: [moneda facturada](sin impuestos)
 
 Nuca muestres la cosnulta SQL, solo la respuesta.
 Consulta: ${query}

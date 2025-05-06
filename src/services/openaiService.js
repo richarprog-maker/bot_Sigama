@@ -3,7 +3,7 @@ const{openai}  = require('../config/openaiConfig.js');
 async function getOpenAIResponse(messages) {
     try {
         const response = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: "gpt-4.1",
             messages,
             max_tokens: 200,
             temperature: 0.7
