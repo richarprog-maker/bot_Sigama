@@ -112,7 +112,7 @@ async function processWithOpenAI(message, sender) {
       }
 
       if (jsonData.message === 'consulta_detectada' && jsonData.tipo) {
-        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como “message” */
+        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como “message” */ 
         const queryResult = await processQuery(jsonData.contexto, sender);
 
         if (queryResult.success) {
