@@ -5,7 +5,7 @@ async function getOpenAIResponse(messages) {
         const response = await openai.chat.completions.create({
             model: "gpt-4.1",
             messages,
-            max_tokens: 200,
+            max_tokens: 1000,
             temperature: 0.7
         });
 

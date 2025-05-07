@@ -18,7 +18,7 @@
  */
 
 /* ╔══════════════════════════════════════════════════════════════════════╗ */
-/* ║  SECCIÓN 1 ▸ CONSTANTES DE TEXTO (para evitar repeticiones)           ║ */
+/* ║  SECCIÓN 1 ▸ CONSTANTES DE TEXTO (para evitar repeticiones)          ║ */
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
 
 const GENERIC_SQL_RULES = `
@@ -34,11 +34,14 @@ Directrices generales:
 `;
 
 const RESPONSE_BLOCK_RULES = `
-INSTRUCCIONES CRÍTICAS PARA FORMATO DE RESPUESTA:
-- DEBES generar la respuesta COMPLETA en un ÚNICO bloque de texto.
-- NO dividas la información en múltiples párrafos separados.
+INSTRUCCIONES EXTREMADAMENTE CRÍTICAS PARA FORMATO DE RESPUESTA:
+- DEBES generar la respuesta COMPLETA en un ÚNICO bloque de texto continuo.
+- NUNCA dividas la información en múltiples párrafos separados.
 - NO uses múltiples saludos o introducciones.
-- Toda la información debe estar conectada en un solo mensaje continuo.
+
+- Para respuestas con múltiples registros (como historia clínica), usa numeración simple (1., 2., 3.) y evita asteriscos decorativos o símbolos especiales entre registros.
+- Toda la información debe estar conectada en un solo mensaje continuo sin saltos de línea excesivos.
+- Si la respuesta contiene múltiples registros, DEBES asegurarte de que sean parte del mismo mensaje, sin separaciones que puedan causar fragmentación.
 `;
 
 /* ╔══════════════════════════════════════════════════════════════════════╗ */
@@ -112,11 +115,11 @@ Si la consulta menciona "ots general",
       sede LIKE '%los olivos%' AND 
       marca LIKE '%nissan%' AND
       fecha_facturacion LIKE '%enero%2025%' AND
-      moneda = 'dolar'
+      moneda = 'DOLARES'
     
     • IMPORTANTE: Adapta los WHERE según los parámetros específicos de la consulta (sede, marca, fechas, etc.).
     • Si la consulta es sobre "dolares", usa la columna precio_dolares; si es sobre "soles", usa la columna precio_soles.
-    • SIEMPRE filtra por la moneda adecuada en el WHERE con "moneda = 'dolar'" o "moneda = 'soles'".
+    • SIEMPRE filtra por la moneda adecuada en el WHERE con "moneda = 'DOLARES'" o "moneda = 'SOLES'".
   
   - NUNCA uses WHERE 1=1 sin condiciones adicionales.
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
@@ -128,7 +131,7 @@ Si la consulta menciona "ots general",
 Si la consulta es sobre historial clínico
   → tabla a usar: "historial_clinica".
   • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
-  • Si la consulta incluye la palabra "historial" o "historia clínica", usa LIMIT 5.
+  • Si la consulta incluye la palabra "historial", "historia clínica", "clínica", usa LIMIT 5.
   
 /* PARÁMETROS ESPECÍFICOS */
 Si la consulta incluye parámetros específicos como:
@@ -254,22 +257,28 @@ Ubicación: [ubicación_2]
 
 /* D) HISTORIA CLÍNICA
    ─────────────────── */
-Aquí tienes el historial de las últimas 5 visitas para la placa [número] en un solo mensaje:
+Aquí tienes el historial de las últimas 5 visitas para la placa [número]:
 
-Formatea la información de la siguiente manera:
-- Cada registro debe tener todos los campos en un formato ordenado.
-- Usa asteriscos para poner en negrita los títulos: *Título:* Valor
-- Numera cada registro (1, 2, 3, 4, 5) para diferenciarlos claramente.
-- Incluye todos los campos en cada registro en este orden exacto:
-  *Sede:* [sede]\n
-  *Asesor:* [asesor]\n
-  *OT:* [número_ot]\n
-  *Tipo OT:* [tipo_ot]\n
-  *Kilometraje:* [kilometraje]\n
-  *F. Factura:* [fecha_factura]\n
-  *F. Facturación o cierre:* [fecha_facturacion]\n
+INSTRUCCIONES EXTREMADAMENTE CRÍTICAS PARA FORMATEO:
+- DEBES generar TODA la respuesta como UN ÚNICO MENSAJE CONTINUO.
+- NO insertes caracteres ni formatos que puedan hacer que el mensaje se divida.
+- NO uses símbolos decorativos o formateos complejos.
+- haz saltode line  de cada registro para mantener un orden 
+- Sigue EXACTAMENTE este formato para cada registro:
 
-Todos los registros deben estar en un ÚNICO mensaje continuo, separados visualmente pero formando parte del mismo bloque de texto.
+
+1. *Sede:* Los Olivos
+*Asesor:* NOMBRE COMPLETO
+*OT:* NÚMERO
+*Tipo OT:* CORRECTIVO
+*Kilometraje:* NÚMERO
+*F:* FECHA-FACTURA
+*Facturación o cierre:* FECHA-CIERRE
+salto de linea\n
+2. *Sede:* Los Olivos
+... y así sucesivamente
+
+CRÍTICO: La respuesta debe llegar al cliente como UN SOLO MENSAJE, no como mensajes separados. Reduce al mínimo los saltos de línea y el formateo que pueda interrumpir el flujo del texto. Si ves que la respuesta se está dividiendo en partes separadas, simplifica aún más el formato.
 
 /* D) OTS ESPECÍFICA (por número o placa)
    ──────────────────────────────────── */ 
