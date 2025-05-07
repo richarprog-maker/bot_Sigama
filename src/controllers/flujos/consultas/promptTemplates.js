@@ -70,6 +70,7 @@ Si la consulta menciona "meson", "NV", "nota de venta de mesón"
     Fecha de apertura, Fecha de facturación, Cantidad de repuestos, Total NV.
   • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
     - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+    - IMPORTANTE: Si menciona "cuánto" o "facturación" o "monto" pero NO menciona una moneda específica (soles/dolares) → usa SUM(precio_total_factura) para sumar el monto total.
     - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de NVs que cumplen los criterios.
     - Si es una consulta general, incluye TODOS los parámetros (sede, cliente, fechas, etc.) en el WHERE.
     - Si es una consulta general, NO uses WHERE 1=1 sin condiciones adicionales.
@@ -97,6 +98,7 @@ Si la consulta menciona "ots general",
 • Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna tipo
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - IMPORTANTE: Si menciona "cuánto" o "facturación" o "monto" pero NO menciona una moneda específica (soles/dolares) → usa SUM(precio_total_factura) para sumar el monto total.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
   - Si menciona "desglosar" o "desglose" o frases como "dame el desglose" → debes generar una consulta SQL que calcule 
     separadamente los montos para cada categoría usando la columna "tipo". Ejemplo para una consulta de desglose:
@@ -318,6 +320,7 @@ IMPORTANTE: Contexto de ÓRDENES DE TRABAJO.
 • Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna "tipo"
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - IMPORTANTE: Si menciona "cuánto" o "facturación" o "monto" pero NO menciona una moneda específica (soles/dolares) → usa SUM(precio_total_factura) para sumar el monto total.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
   - NUNCA uses WHERE 1=1 como única condición.
   - SIEMPRE incluye filtros específicos por sede, marca, asesor, fechas u otros parámetros mencionados.
@@ -333,6 +336,7 @@ Tabla: "meson".
 
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas "precio_soles" o "precio_dolares" según la moneda mencionada.
+  - IMPORTANTE: Si menciona "cuánto" o "facturación" o "monto" pero NO menciona una moneda específica (soles/dolares) → usa SUM(precio_total_factura) para sumar el monto total.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de NVs que cumplen los criterios.
 
 Para consultas generales:
