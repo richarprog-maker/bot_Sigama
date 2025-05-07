@@ -48,6 +48,7 @@ const conversationFlows = {
       'CRÍTICO: Analiza PRIMERO si el mensaje ya contiene todos los parámetros necesarios para generar el JSON:',
       '- Si menciona "cuántas" → asume que es consulta de CANTIDAD de OTs.',
       '- Si menciona "cuánto" → asume que es consulta de MONTO facturado.',
+      '- Si menciona "desglosar" o "desglose" → asume que es consulta de DESGLOSE de facturación.',
       '- Si ya proporciona todos los parámetros necesarios y NO menciona ninguna fecha, mes, año o rango de fechas, genera el JSON directamente sin preguntar por el tipo de fecha.',
       '- SOLO SI DETECTAS EXPLÍCITAMENTE UNA FECHA, MES, AÑO O RANGO DE FECHAS en el mensaje Y NO SE ESPECIFICA EL TIPO DE FECHA, PREGUNTA: "¿Desea consultar por fecha de APERTURA o fecha de FACTURACIÓN?" antes de generar el JSON.',
       'CRÍTICO: Diferencia entre CONSULTA OT y HISTORIA CLÍNICA:',

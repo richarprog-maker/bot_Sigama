@@ -98,6 +98,24 @@ Si la consulta menciona "ots general",
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
+  - Si menciona "desglosar" o "desglose" o frases como "dame el desglose" → debes generar una consulta SQL que calcule 
+    separadamente los montos para cada categoría usando la columna "tipo". Ejemplo para una consulta de desglose:
+    
+    SELECT 
+      SUM(CASE WHEN tipo = 'MO' THEN precio_dolares ELSE 0 END) as mano_obra,
+      SUM(CASE WHEN tipo = 'REPUESTOS' THEN precio_dolares ELSE 0 END) as repuestos,
+      SUM(CASE WHEN tipo = 'SERVICIOS TERCEROS' THEN precio_dolares ELSE 0 END) as servicios_terceros
+    FROM ots_facturadas
+    WHERE 
+      sede LIKE '%los olivos%' AND 
+      marca LIKE '%nissan%' AND
+      fecha_facturacion LIKE '%enero%2025%' AND
+      moneda = 'dolar'
+    
+    • IMPORTANTE: Adapta los WHERE según los parámetros específicos de la consulta (sede, marca, fechas, etc.).
+    • Si la consulta es sobre "dolares", usa la columna precio_dolares; si es sobre "soles", usa la columna precio_soles.
+    • SIEMPRE filtra por la moneda adecuada en el WHERE con "moneda = 'dolar'" o "moneda = 'soles'".
+  
   - NUNCA uses WHERE 1=1 sin condiciones adicionales.
   - SIEMPRE incluye todos los parámetros mencionados (sede, marca, asesor, fechas, etc.) en el WHERE.
 • IMPORTANTE: Si la consulta incluye un numero_ot o placa específicos, SIEMPRE úsalos en el WHERE.
@@ -147,6 +165,12 @@ function generateNaturalResponsePrompt(
   sqlQuery,
   serializableResult
 ) {
+  // Detectar si es una consulta de desglose específicamente
+  const isDesglose = query.toLowerCase().includes("desglos") || 
+                    (sqlQuery.toLowerCase().includes("mano_obra") && 
+                     sqlQuery.toLowerCase().includes("repuestos") && 
+                     sqlQuery.toLowerCase().includes("servicios_terceros"));
+                   
   return `
 Eres un analista de datos especializado en presentar información de manera clara y estructurada.
 
@@ -168,6 +192,22 @@ ${RESPONSE_BLOCK_RULES}
   El asesor [nombre del asesor] ha generado [cantidad] OT en el área de [área] en [periodo].
   El asesor [nombre del asesor] ha generado una facturación total de [moneda] (Sin impuestos) en [periodo].
 
+• Para consultas de DESGLOSE de facturación:
+  Por supuesto. Aquí tienes el desglose:
+  Mano de obra: [moneda] (Sin impuestos)
+  Repuestos: [moneda] (Sin impuestos)
+  Servicios terceros: [moneda] (Sin impuestos)
+
+${isDesglose ? `
+CRÍTICO: Esta consulta es específicamente para un desglose de facturación. DEBES proporcionar la respuesta exactamente en este formato:
+
+Por supuesto. Aquí tienes el desglose:
+Mano de obra: US$ [valor_mano_obra] (Sin impuestos)
+Repuestos: US$ [valor_repuestos] (Sin impuestos)
+Servicios terceros: US$ [valor_servicios_terceros] (Sin impuestos)
+
+La respuesta DEBE incluir los tres valores específicos de la consulta SQL separados en tres líneas distintas, EXACTAMENTE en este formato.
+` : ""}
 
 /* B) NV MESÓN
    ─────────── */
@@ -182,7 +222,7 @@ ${RESPONSE_BLOCK_RULES}
   F. Apertura: [fecha_apertura]
   F. Facturación: [fecha_facturacion]
   Cantidad de repuestos: [cantidad]
-  Total NV: S/ [monto] (Sin impuestos)
+  Total NV: S/ [monto] (Sin impuestos)
 
 • NV GENERAL (sin número):
   Aquí está la información solicitada para NV MESÓN:
