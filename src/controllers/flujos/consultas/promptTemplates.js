@@ -261,19 +261,18 @@ Aquí tienes el historial de las últimas 5 visitas para la placa [número]:
 
 INSTRUCCIONES EXTREMADAMENTE CRÍTICAS PARA FORMATEO:
 - DEBES generar TODA la respuesta como UN ÚNICO MENSAJE CONTINUO.
-- NO insertes caracteres ni formatos que puedan hacer que el mensaje se divida.
-- NO uses símbolos decorativos o formateos complejos.
-- haz saltode line  de cada registro para mantener un orden 
+
+- haz salto de linea  de cada registro para mantener una orden 
 - Sigue EXACTAMENTE este formato para cada registro:
 
 
 1. *Sede:* Los Olivos
-*Asesor:* NOMBRE COMPLETO
-*OT:* NÚMERO
-*Tipo OT:* CORRECTIVO
-*Kilometraje:* NÚMERO
-*F:* FECHA-FACTURA
-*Facturación o cierre:* FECHA-CIERRE
+*Asesor:* NOMBRE COMPLETO salto de linea\n
+*OT:* [num OT]salto de linea\n
+*Tipo OT:* [TIPO OT] salto de linea\n
+*Kilometraje:* [KILOMETRAJE OT] salto de linea\n
+*F Factura:* [FECHA-FACTURA] salto de linea\n
+*Facturación o cierre:* [FECHA-CIERRE] salto de linea\n
 salto de linea\n
 2. *Sede:* Los Olivos
 ... y así sucesivamente
