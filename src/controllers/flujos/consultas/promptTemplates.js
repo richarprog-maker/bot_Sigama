@@ -96,7 +96,7 @@ Si la consulta es sobre stock, disponibilidad o información de un repuesto espe
 /* OTs */
 Si la consulta menciona "ots general",
   → tabla a usar: "ots_facturadas".
-• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica", SIEMPRE usa LIMIT 1 para devolver una sola fila.
+• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica", SIEMPRE usa LIMIT 1 para devolver una sola fila, tambien usa el SELECT * FROM para devolver todas las columnas.
 • OTs GENERAL                         → tabla "ots_facturadas".
 • Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna tipo
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
