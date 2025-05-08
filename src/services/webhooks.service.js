@@ -1,22 +1,15 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { openai } = require('../config/openaiConfig.js');
 const { getConnection } = require('../config/dbConnection.js');
 const { getStores } = require('./sigma/storeService.js');
 require('dotenv').config();
 
 /**
- * Verificar que la variable de entorno ANTHROPIC_API_KEY está definida
+ * Verificar que la variable de entorno OPENAI_API_KEY está definida
  */
-if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Error: La variable de entorno ANTHROPIC_API_KEY no está definida.");
+if (!process.env.OPENAI_API_KEY) {
+    console.error("Error: La variable de entorno OPENAI_API_KEY no está definida.");
     process.exit(1);
 }
-
-/**
- * Configuración de Claude AI
- */
-const claude = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 /**
  * Función para obtener sucursales desde la API
@@ -111,23 +104,23 @@ async function processWithOpenAI(message, isFirstInteraction = false) {
             systemMessage += `\nPRIMERA INTERACCIÓN: Limitar respuesta a saludo según hora + "¿En qué puedo ayudarte hoy?"`;
         }
 
-        const completion = await claude.messages.create({
-            model: "claude-3-5-sonnet-20240620",
-            system: systemMessage,
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
             messages: [
+                { role: "system", content: systemMessage },
                 { role: "user", content: message }
             ],
             max_tokens: 150,
             temperature: 0.5
         });
 
-        if (!completion.content || !completion.content[0] || !completion.content[0].text) {
-            throw new Error("Respuesta inválida de Claude AI");
+        if (!completion.choices || !completion.choices[0] || !completion.choices[0].message || !completion.choices[0].message.content) {
+            throw new Error("Respuesta inválida de OpenAI");
         }
 
-        return completion.content[0].text.trim();
+        return completion.choices[0].message.content.trim();
     } catch (error) {
-        console.error("[Error Claude AI]:", error);
+        console.error("[Error OpenAI]:", error);
         return "Disculpe, estamos experimentando alta demanda. ¿Podría intentar nuevamente en unos momentos?";
     }
 }

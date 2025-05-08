@@ -1,12 +1,11 @@
 # Guía de Conversación para Bot Sigma
 
-## Actualización Importante: Integración con Claude AI
+## Actualización Importante: Integración con OpenAI GPT-4o
 
-El sistema ha sido actualizado para utilizar Claude AI (Anthropic) en lugar de OpenAI. Para configurar el entorno correctamente:
+El sistema ha sido actualizado para utilizar OpenAI GPT-4o. Para configurar el entorno correctamente:
 
-1. Instale la dependencia de Anthropic: `npm install @anthropic-ai/sdk`
-2. Agregue su clave API de Claude en las variables de entorno como `ANTHROPIC_API_KEY`
-3. La clave `OPENAI_API_KEY` sigue siendo necesaria para el servicio Whisper de transcripción de audio
+1. Instale la dependencia de OpenAI: `npm install openai`
+2. Agregue su clave API de OpenAI en las variables de entorno como `OPENAI_API_KEY`
 
 ## Índice
 

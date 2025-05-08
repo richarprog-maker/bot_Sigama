@@ -3,7 +3,7 @@
  * 
  */
 
-const { claude } = require('../../../config/claudeConfig.js');
+const { openai } = require('../../../config/openaiConfig.js');
 const { getConnection } = require('../../../config/dbConnection.js');
 const logger = require('console');
 const promptTemplates = require('./promptTemplates.js');
@@ -89,14 +89,14 @@ class EnhancedNaturalLanguageMySQLInterface {
         const prompt = promptTemplates.generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery);
 
         try {
-            const response = await claude.messages.create({
-                model: "claude-3-opus-20240229",
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o",
                 messages: [{ role: "user", content: prompt }],
                 max_tokens: 200,
                 temperature: 0.2
             });
 
-            let sqlQuery = response.content[0].text.trim();
+            let sqlQuery = response.choices[0].message.content.trim();
             
             // Limpiar formato de código si está presente
             if (sqlQuery.startsWith('```') && sqlQuery.endsWith('```')) {
@@ -320,15 +320,15 @@ class EnhancedNaturalLanguageMySQLInterface {
         );
         
         try {
-            const response = await claude.messages.create({
-                model: "claude-3-opus-20240229",
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o",
                 messages: [{ role: "user", content: prompt }],
                 max_tokens: 1000,
                 temperature: 0.3
             });
             
             return {
-                natural_response: response.content[0].text.trim(),
+                natural_response: response.choices[0].message.content.trim(),
                 query_result: queryResult,
                 sql_query: sqlQuery
             };
