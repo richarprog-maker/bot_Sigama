@@ -80,18 +80,19 @@ function getQueryHistory() {
 async function isDatabaseQuery(message) {
     try {
         // Crear un prompt específico para detectar si es una consulta a base de datos
+        const systemContent = "Eres un asistente especializado en detectar si un mensaje contiene una intención de consulta a una base de datos. Debes responder únicamente 'true' si el mensaje parece solicitar información de una base de datos o 'false' si no lo es.";
+        
         const messages = [
-            {
-                role: "system",
-                content: "Eres un asistente especializado en detectar si un mensaje contiene una intención de consulta a una base de datos. Debes responder únicamente 'true' si el mensaje parece solicitar información de una base de datos o 'false' si no lo es."
-            },
             {
                 role: "user",
                 content: `¿El siguiente mensaje es una consulta a base de datos? Responde solo con 'true' o 'false': "${message}"`
             }
         ];
 
-        const result = await openaiService.getOpenAIResponse(messages);
+        const result = await openaiService.getOpenAIResponse([
+            { role: "system", content: systemContent },
+            ...messages
+        ]);
         return result.trim().toLowerCase() === 'true';
     } catch (error) {
         logger.error(`Error al evaluar si es consulta de base de datos: ${error.message}`);

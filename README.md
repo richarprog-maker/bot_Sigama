@@ -1,5 +1,13 @@
 # Guía de Conversación para Bot Sigma
 
+## Actualización Importante: Integración con Claude AI
+
+El sistema ha sido actualizado para utilizar Claude AI (Anthropic) en lugar de OpenAI. Para configurar el entorno correctamente:
+
+1. Instale la dependencia de Anthropic: `npm install @anthropic-ai/sdk`
+2. Agregue su clave API de Claude en las variables de entorno como `ANTHROPIC_API_KEY`
+3. La clave `OPENAI_API_KEY` sigue siendo necesaria para el servicio Whisper de transcripción de audio
+
 ## Índice
 
 1. [Introducción](#introducción)
@@ -57,7 +65,7 @@ Esta guía detalla los flujos de conversación para el Bot Sigma, un asistente v
 
 | Actor | Mensaje | Notas |
 |-------|---------|-------|
-| **Cliente** | ¿Cuánto ha facturado en total en [moneda] el asesor VALERIA YOLANDA DIAZ en  el mes de diciembre de 2024 para  la marca de SUZUKI? | MONEDA y sin especificar LOCAL |
+| **Cliente** | ¿Cuánto ha facturado en total en [moneda] el asesor VALERIA YOLANDA DIAZ en  el mes de diciembre de 2024 para  la marca de SUZUKI? | MONEDA y sin especificar LOCAL |
 | **Bot (Sigma)** | El asesor [nombre del asesor] ha generado una facturación total de [moneda] (Sin impuestos) en [periodo]. | |
 
 #### Consultas por Monto Facturado

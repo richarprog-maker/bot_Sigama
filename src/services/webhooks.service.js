@@ -1,21 +1,21 @@
-const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 const { getConnection } = require('../config/dbConnection.js');
 const { getStores } = require('./sigma/storeService.js');
 require('dotenv').config();
 
 /**
- * Verificar que la variable de entorno OPENAI_API_KEY está definida
+ * Verificar que la variable de entorno ANTHROPIC_API_KEY está definida
  */
-if (!process.env.OPENAI_API_KEY) {
-    console.error("Error: La variable de entorno OPENAI_API_KEY no está definida.");
+if (!process.env.ANTHROPIC_API_KEY) {
+    console.error("Error: La variable de entorno ANTHROPIC_API_KEY no está definida.");
     process.exit(1);
 }
 
 /**
- * Configuración de OpenAI
+ * Configuración de Claude AI
  */
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+const claude = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 /**
@@ -56,7 +56,7 @@ function obtenerHora() {
 async function processWithOpenAI(message, isFirstInteraction = false) {
     try {
         const sucursales = await getSucursales();
-        const hora =  obtenerHora();
+        const hora = obtenerHora();
         let systemMessage = `Eres un asistente virtual especializado de Kodomotors llamado Tania, enfocado en brindar una experiencia excepcional al cliente.
 
         COMPORTAMIENTO BASE:
@@ -111,23 +111,23 @@ async function processWithOpenAI(message, isFirstInteraction = false) {
             systemMessage += `\nPRIMERA INTERACCIÓN: Limitar respuesta a saludo según hora + "¿En qué puedo ayudarte hoy?"`;
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4",
+        const completion = await claude.messages.create({
+            model: "claude-3-5-sonnet-20240620",
+            system: systemMessage,
             messages: [
-                { role: "system", content: systemMessage },
                 { role: "user", content: message }
             ],
             max_tokens: 150,
-            temperature: 0.5 // Reducido para respuestas más consistentes
+            temperature: 0.5
         });
 
-        if (!completion.choices?.[0]?.message?.content) {
-            throw new Error("Respuesta inválida de OpenAI");
+        if (!completion.content || !completion.content[0] || !completion.content[0].text) {
+            throw new Error("Respuesta inválida de Claude AI");
         }
 
-        return completion.choices[0].message.content.trim();
+        return completion.content[0].text.trim();
     } catch (error) {
-        console.error("[Error OpenAI]:", error);
+        console.error("[Error Claude AI]:", error);
         return "Disculpe, estamos experimentando alta demanda. ¿Podría intentar nuevamente en unos momentos?";
     }
 }

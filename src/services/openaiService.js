@@ -1,22 +1,34 @@
-const{openai}  = require('../config/openaiConfig.js');
+const { claude } = require('../config/claudeConfig.js');
 
 async function getOpenAIResponse(messages) {
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4.1",
-            messages,
+        // Extract system message if present
+        const systemMessage = messages.find(msg => msg.role === 'system')?.content || '';
+        
+        // Filter out system messages and format user/assistant messages
+        const formattedMessages = messages
+            .filter(msg => msg.role !== 'system')
+            .map(msg => ({
+                role: msg.role,
+                content: msg.content
+            }));
+
+        const response = await claude.messages.create({
+            model: "claude-3-opus-20240229",
             max_tokens: 1000,
-            temperature: 0.7
+            temperature: 0.7,
+            system: systemMessage,
+            messages: formattedMessages
         });
 
-        if (!response.choices?.[0]?.message?.content) {
-            throw new Error("La respuesta de OpenAI no tiene el formato esperado.");
+        if (!response.content || !response.content[0] || !response.content[0].text) {
+            throw new Error("La respuesta de Claude AI no tiene el formato esperado.");
         }
 
-        return response.choices[0].message.content;
+        return response.content[0].text;
 
     } catch (error) {
-        console.error("Error al obtener respuesta de OpenAI:", error);
+        console.error("Error al obtener respuesta de Claude AI:", error);
         throw error;
     }
 }

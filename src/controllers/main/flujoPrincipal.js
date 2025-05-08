@@ -33,6 +33,30 @@ function flattenConversation(messages) {
     .join('\n');
 }
 
+/**
+ * Sanitiza el texto JSON para asegurar que se pueda parsear correctamente
+ * @param {string} jsonText - El texto JSON a sanitizar
+ * @returns {string} - El texto JSON sanitizado
+ */
+function sanitizeJsonText(jsonText) {
+  // Eliminar cualquier texto antes del primer '{'
+  const firstBrace = jsonText.indexOf('{');
+  if (firstBrace > 0) {
+    jsonText = jsonText.substring(firstBrace);
+  }
+  
+  // Eliminar cualquier texto después del último '}'
+  const lastBrace = jsonText.lastIndexOf('}');
+  if (lastBrace >= 0 && lastBrace < jsonText.length - 1) {
+    jsonText = jsonText.substring(0, lastBrace + 1);
+  }
+  
+  // Reemplazar caracteres especiales que puedan causar problemas
+  jsonText = jsonText.replace(/[\u0000-\u0019]+/g, '');
+  
+  return jsonText;
+}
+
 /* ─────────── Controlador ─────────── */
 async function processWithOpenAI(message, sender) {
   const state = getOrCreateConversationState(sender);
@@ -56,28 +80,32 @@ async function processWithOpenAI(message, sender) {
   🔴 SOLO responde a preguntas relacionadas con las consultas anteriores.  
   🔴 NO converses sobre temas de música ni información general.
   
-  **CRÍTICO – Detección de consultas específicas**  
-  Cuando identifiques una consulta *válida*, termina tu respuesta con el bloque en contexto debe de ir las consulats que se reliza debes de ahcer un reumen y enviar las preguntas en contexto: 
+  **CRÍTICO – Detección de consultas específicas**  
+  Cuando identifiques una consulta *válida*, termina tu respuesta con el bloque en contexto debe de ir las consultas que se realiza. Debes hacer un resumen y enviar las preguntas en contexto.
+  
+  IMPORTANTE: Asegúrate de que el JSON esté correctamente formateado y no contenga caracteres adicionales.
   
   ===CONULTAR_DATOS_SIGMA===
   {
     "message": "consulta_detectada",
     "tipo": "[tipo_de_consulta]",
-    "contexto": "<TODO EL HISTORIAL EN TEXTO PLANO – hasta 4 KB>"
+    "contexto": "[TODO EL HISTORIAL EN TEXTO PLANO – hasta 4 KB]"
   }
   
-  *El campo **contexto** debe contener todo lo conversado pero resume recuerda que eres una sistente que brinda informacion para reponder consultas 
+  *El campo **contexto** debe contener todo lo conversado pero resume recuerda que eres una asistente que brinda información para responder consultas.
   
   
-  **CRÍTICO – Detección de solicitudes de gráficas**  
+  **CRÍTICO – Detección de solicitudes de gráficas**  
   Si el usuario pide una gráfica, termina con:
+  
+  IMPORTANTE: Asegúrate de que el JSON esté correctamente formateado y no contenga caracteres adicionales.
   
   ===GENERAR_GRAFICA_SIGMA===
   {
     "message": "grafica_solicitada",
-    "query":   "[consulta_para_datos]",
+    "query": "[consulta_para_datos]",
     "chartType": "[bar|pie]",
-    "title":     "[título_opcional]"
+    "title": "[título_opcional]"
   }
   
   Para *chartType* usa **bar** (barras) o **pie** (pastel).
@@ -101,7 +129,30 @@ async function processWithOpenAI(message, sender) {
     /* ---------- CONSULTAR_DATOS_SIGMA ---------- */
     if (response.includes('===CONULTAR_DATOS_SIGMA===')) {
       const jsonStart = response.indexOf('===CONULTAR_DATOS_SIGMA===') + '===CONULTAR_DATOS_SIGMA==='.length;
-      const jsonData  = JSON.parse(response.slice(jsonStart).trim());
+      let jsonText = response.slice(jsonStart).trim();
+      
+      // Try to extract just the JSON object using regex
+      const jsonMatch = jsonText.match(/(\{[\s\S]*?\})/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonText = jsonMatch[1];
+      } else {
+        // Fallback to finding the end bracket
+        const possibleEndIndex = jsonText.indexOf('}') + 1;
+        if (possibleEndIndex > 0) {
+          jsonText = jsonText.substring(0, possibleEndIndex);
+        }
+      }
+      
+      let jsonData;
+      try {
+        jsonText = sanitizeJsonText(jsonText);
+        jsonData = JSON.parse(jsonText);
+      } catch (jsonError) {
+        console.error('Error al parsear JSON de consulta:', jsonError);
+        console.error('Texto JSON problemático:', jsonText);
+        console.error('Respuesta completa:', response);
+        throw new Error('Formato de respuesta inválido');
+      }
 
       /* Aseguramos contexto */
       if (!jsonData.contexto) {
@@ -112,7 +163,7 @@ async function processWithOpenAI(message, sender) {
       }
 
       if (jsonData.message === 'consulta_detectada' && jsonData.tipo) {
-        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como “message” */ 
+        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como "message" */ 
         const queryResult = await processQuery(jsonData.contexto, sender);
 
         if (queryResult.success) {
@@ -125,7 +176,30 @@ async function processWithOpenAI(message, sender) {
     /* ---------- GENERAR_GRAFICA_SIGMA ---------- */
     else if (response.includes('===GENERAR_GRAFICA_SIGMA===')) {
       const jsonStart = response.indexOf('===GENERAR_GRAFICA_SIGMA===') + '===GENERAR_GRAFICA_SIGMA==='.length;
-      const jsonData  = JSON.parse(response.slice(jsonStart).trim());
+      let jsonText = response.slice(jsonStart).trim();
+      
+      // Try to extract just the JSON object using regex
+      const jsonMatch = jsonText.match(/(\{[\s\S]*?\})/);
+      if (jsonMatch && jsonMatch[1]) {
+        jsonText = jsonMatch[1];
+      } else {
+        // Fallback to finding the end bracket
+        const possibleEndIndex = jsonText.indexOf('}') + 1;
+        if (possibleEndIndex > 0) {
+          jsonText = jsonText.substring(0, possibleEndIndex);
+        }
+      }
+      
+      let jsonData;
+      try {
+        jsonText = sanitizeJsonText(jsonText);
+        jsonData = JSON.parse(jsonText);
+      } catch (jsonError) {
+        console.error('Error al parsear JSON de gráfica:', jsonError);
+        console.error('Texto JSON problemático:', jsonText);
+        console.error('Respuesta completa:', response);
+        throw new Error('Formato de respuesta inválido');
+      }
 
       if (jsonData.message === 'grafica_solicitada') {
         cleanResponse = 'Estoy generando la gráfica solicitada. Te la enviaré en un momento…';
