@@ -44,6 +44,16 @@ INSTRUCCIONES EXTREMADAMENTE CRÍTICAS PARA FORMATO DE RESPUESTA:
 - Si la respuesta contiene múltiples registros, DEBES asegurarte de que sean parte del mismo mensaje, sin separaciones que puedan causar fragmentación.
 `;
 
+const FORMAT_GUIDELINES = `
+INSTRUCCIONES CRÍTICAS PARA FORMATOS DE MONEDA Y FECHAS:
+- MONEDAS: 
+  * Soles: Formato "S/ 1,234.56" (con símbolo S/ al inicio, coma como separador de miles, punto para decimales)
+  * Dólares: Formato "US$ 1,234.56" (con símbolo US$ al inicio, coma como separador de miles, punto para decimales)
+- FECHAS: 
+  * Siempre usa el formato DD/MM/YYYY (día/mes/año)
+  * Ejemplo: 25/01/2023 para el 25 de enero de 2023
+`;
+
 /* ╔══════════════════════════════════════════════════════════════════════╗ */
 /* ║  SECCIÓN 2 ▸ GENERADOR DE PROMPT SQL                                 ║ */
 /* ╚══════════════════════════════════════════════════════════════════════╝ */
@@ -182,36 +192,37 @@ Eres un analista de datos especializado en presentar información de manera clar
 ${noResults ? "IMPORTANTE: No se encontraron resultados. Debes indicarlo al usuario." : ""}
 ${contextualInstructions}
 ${RESPONSE_BLOCK_RULES}
+${FORMAT_GUIDELINES}
 
 /* ———————————————————— FORMATOS ESPECÍFICOS ———————————————————— */
 
 /* A) SEGUIMIENTO FACTURACIÓN OTs (ots_facturadas)
    ───────────────────────────────────────────── */
 • Para consultas de MONTOS (cuánto):
-  El monto facturado en [tipo de monto facturado] en los últimos [periodo] es de [moneda] (Sin impuestos).
+  El monto facturado en [tipo de monto facturado] en los últimos [periodo] es de [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos).
 
 • Para consultas de CANTIDAD (cuántas):
-  Tienes [cantidad] órdenes de trabajo [estado]. Total de facturación: [moneda] (Sin impuestos). Mano de obra: [moneda] (Sin impuestos). Repuestos: [moneda] (Sin impuestos). Servicios terceros: [moneda] (Sin impuestos).
+  Tienes [cantidad] órdenes de trabajo [estado]. Total de facturación: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos). Mano de obra: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos). Repuestos: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos). Servicios terceros: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos).
 
 • Para consultas por ASESOR:
   El asesor [nombre del asesor] ha generado [cantidad] OT en el área de [área] en [periodo].
-  El asesor [nombre del asesor] ha generado una facturación total de [moneda] (Sin impuestos) en [periodo].
+  El asesor [nombre del asesor] ha generado una facturación total de [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos) en [periodo].
 
 • Para consultas de DESGLOSE de facturación:
   Por supuesto. Aquí tienes el desglose:
-  Mano de obra: [moneda] (Sin impuestos)
-  Repuestos: [moneda] (Sin impuestos)
-  Servicios terceros: [moneda] (Sin impuestos)
+  Mano de obra: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos)
+  Repuestos: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos)
+  Servicios terceros: [S/ XX,XXX.XX o US$ XX,XXX.XX] (Sin impuestos)
 
 ${isDesglose ? `
 CRÍTICO: Esta consulta es específicamente para un desglose de facturación. DEBES proporcionar la respuesta exactamente en este formato:
 
 Por supuesto. Aquí tienes el desglose:
-Mano de obra: US$ [valor_mano_obra] (Sin impuestos)
-Repuestos: US$ [valor_repuestos] (Sin impuestos)
-Servicios terceros: US$ [valor_servicios_terceros] (Sin impuestos)
+Mano de obra: US$ [X,XXX.XX] (Sin impuestos)
+Repuestos: US$ [X,XXX.XX] (Sin impuestos)
+Servicios terceros: US$ [X,XXX.XX] (Sin impuestos)
 
-La respuesta DEBE incluir los tres valores específicos de la consulta SQL separados en tres líneas distintas, EXACTAMENTE en este formato.
+La respuesta DEBE incluir los tres valores específicos de la consulta SQL separados en tres líneas distintas, EXACTAMENTE en este formato con el formato de moneda correcto.
 ` : ""}
 
 /* B) NV MESÓN
@@ -224,10 +235,10 @@ La respuesta DEBE incluir los tres valores específicos de la consulta SQL separ
   NV: [número]
   Doc. Cliente: [doc_cliente]
   Cliente: [cliente]
-  F. Apertura: [fecha_apertura]
-  F. Facturación: [fecha_facturacion]
+  Fecha Apertura: [DD/MM/YYYY]
+  Fecha Facturación: [DD/MM/YYYY]
   Cantidad de repuestos: [cantidad]
-  Total NV: S/ [monto] (Sin impuestos)
+  Total NV: S/ [X,XXX.XX] (Sin impuestos)
 
 • NV GENERAL (sin número):
   Aquí está la información solicitada para NV MESÓN:
@@ -242,8 +253,9 @@ Formatea la información para que se vea ordenada en WhatsApp. Primero muestra l
 Ejemplo de salida:
 
 *Información del Repuesto:*
-Precio unitario: S/ [monto_soles] | US$ [monto_dolares] (Sin impuestos)
-ICC: [ICC]
+Descripción: [nombre del repuesto]
+Precio unitario: S/ [X,XXX.XX] | US$ [X,XXX.XX] (Sin impuestos)
+
 
 *Disponibilidad por Local:*
 
@@ -265,16 +277,17 @@ INSTRUCCIONES EXTREMADAMENTE CRÍTICAS PARA FORMATEO:
 - haz salto de linea  de cada registro para mantener una orden 
 - Sigue EXACTAMENTE este formato para cada registro:
 
-
-1. *Sede:* Los Olivos
+HISTORIA CLÍNICA 1
+*Sede:* Los Olivos
 *Asesor:* NOMBRE COMPLETO salto de linea\n
 *OT:* [num OT]salto de linea\n
 *Tipo OT:* [TIPO OT] salto de linea\n
 *Kilometraje:* [KILOMETRAJE OT] salto de linea\n
-*F Factura:* [FECHA-FACTURA] salto de linea\n
-*Facturación o cierre:* [FECHA-CIERRE] salto de linea\n
+*Fecha Apertura:* [DD/MM/YYYY] salto de linea\n
+*Fecha Facturación:* [DD/MM/YYYY] salto de linea\n
 salto de linea\n
-2. *Sede:* Los Olivos
+HISTORIA CLÍNICA 2
+*Sede:* Los Olivos
 ... y así sucesivamente
 
 CRÍTICO: La respuesta debe llegar al cliente como UN SOLO MENSAJE, no como mensajes separados. Reduce al mínimo los saltos de línea y el formateo que pueda interrumpir el flujo del texto. Si ves que la respuesta se está dividiendo en partes separadas, simplifica aún más el formato.
@@ -289,12 +302,12 @@ CRÍTICO: La respuesta debe llegar al cliente como UN SOLO MENSAJE, no como mens
   Asesor: [Nombre del asesor]
   Doc. Cliente: [Número de documento]
   Cliente: [cliente]
-  F. Apertura OT: [fecha de apertura]
-  F. Facturación o Cierre: [Fecha de facturación o cierre]
+  Fecha Apertura OT: [DD/MM/YYYY]
+  Fecha Facturación o Cierre: [DD/MM/YYYY]
   Área: [área]
   Tipo de OT: [Tipo de OT]
   Estado actual: [estado]
-  Total OT: [moneda facturada](sin impuestos)
+  Total OT: [S/ XX,XXX.XX o US$ XX,XXX.XX](sin impuestos)
 
 Nuca muestres la cosnulta SQL, solo la respuesta.
 Consulta: ${query}

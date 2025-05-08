@@ -34,11 +34,26 @@ function flattenConversation(messages) {
 }
 
 /**
+ * Intenta parsear JSON, devuelve null si falla
+ * @param {string} jsonStr - La cadena JSON a intentar parsear
+ * @returns {object|null} - El objeto JSON o null si falló
+ */
+function tryParseJSON(jsonStr) {
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Sanitiza el texto JSON para asegurar que se pueda parsear correctamente
  * @param {string} jsonText - El texto JSON a sanitizar
  * @returns {string} - El texto JSON sanitizado
  */
 function sanitizeJsonText(jsonText) {
+  if (!jsonText) return "{}";
+  
   // Eliminar cualquier texto antes del primer '{'
   const firstBrace = jsonText.indexOf('{');
   if (firstBrace > 0) {
@@ -53,6 +68,30 @@ function sanitizeJsonText(jsonText) {
   
   // Reemplazar caracteres especiales que puedan causar problemas
   jsonText = jsonText.replace(/[\u0000-\u0019]+/g, '');
+  
+  // Verificar balance de llaves
+  let openBraces = 0;
+  let closeBraces = 0;
+  for (let i = 0; i < jsonText.length; i++) {
+    if (jsonText[i] === '{') openBraces++;
+    if (jsonText[i] === '}') closeBraces++;
+  }
+  
+  // Añadir llaves de cierre faltantes
+  while (openBraces > closeBraces) {
+    jsonText += '}';
+    closeBraces++;
+  }
+  
+  // Eliminar llaves de cierre extra al final
+  while (closeBraces > openBraces && jsonText.endsWith('}')) {
+    jsonText = jsonText.substring(0, jsonText.length - 1);
+    closeBraces--;
+  }
+  
+  // Asegurar que el JSON esté completo (debe empezar con { y terminar con })
+  if (!jsonText.startsWith('{')) jsonText = '{' + jsonText;
+  if (!jsonText.endsWith('}')) jsonText = jsonText + '}';
   
   return jsonText;
 }
@@ -80,25 +119,38 @@ async function processWithOpenAI(message, sender) {
   🔴 SOLO responde a preguntas relacionadas con las consultas anteriores.  
   🔴 NO converses sobre temas de música ni información general.
   
+  **CRÍTICO – JSON BIEN FORMATEADO** 
+  El JSON que devuelvas DEBE respetar estas reglas estrictas:
+  - Debe ser un objeto JSON válido y completo
+  - Debe utilizar comillas dobles para las claves y valores de texto
+  - Debe contener TODOS los corchetes de apertura y cierre: cada { debe tener su } correspondiente
+  - No debe contener comentarios ni texto explicativo dentro del JSON
+  - No debe contener saltos de línea ni caracteres especiales no escapados
+
   **CRÍTICO – Detección de consultas específicas**  
-  Cuando identifiques una consulta *válida*, termina tu respuesta con el bloque en contexto debe de ir las consultas que se realiza. Debes hacer un resumen y enviar las preguntas en contexto.
-  
-  IMPORTANTE: Asegúrate de que el JSON esté correctamente formateado y no contenga caracteres adicionales.
+  Cuando identifiques una consulta *válida*, termina tu respuesta con un bloque de JSON siguiendo este formato EXACTO:
   
   ===CONULTAR_DATOS_SIGMA===
   {
     "message": "consulta_detectada",
-    "tipo": "[tipo_de_consulta]",
-    "contexto": "[TODO EL HISTORIAL EN TEXTO PLANO – hasta 4 KB]"
+    "tipo": "[tipo_de_consulta]"
   }
   
-  *El campo **contexto** debe contener todo lo conversado pero resume recuerda que eres una asistente que brinda información para responder consultas.
+  Para consultas de historia clínica usa:
   
+  ===CONULTAR_DATOS_SIGMA===
+  {
+    "message": "consulta_detectada", 
+    "tipo": "historia_clinica",
+    "placa": "[NÚMERO_DE_PLACA]"
+  }
+  
+  * NO incluyas la etiqueta "contexto" en el JSON a menos que sea necesario
+  * Asegúrate de que el JSON tenga TODAS las llaves de cierre correspondientes.
+  * NO añadas texto adicional después del JSON.
   
   **CRÍTICO – Detección de solicitudes de gráficas**  
-  Si el usuario pide una gráfica, termina con:
-  
-  IMPORTANTE: Asegúrate de que el JSON esté correctamente formateado y no contenga caracteres adicionales.
+  Si el usuario pide una gráfica, termina con este formato EXACTO:
   
   ===GENERAR_GRAFICA_SIGMA===
   {
@@ -131,44 +183,106 @@ async function processWithOpenAI(message, sender) {
       const jsonStart = response.indexOf('===CONULTAR_DATOS_SIGMA===') + '===CONULTAR_DATOS_SIGMA==='.length;
       let jsonText = response.slice(jsonStart).trim();
       
-      // Try to extract just the JSON object using regex
-      const jsonMatch = jsonText.match(/(\{[\s\S]*?\})/);
-      if (jsonMatch && jsonMatch[1]) {
-        jsonText = jsonMatch[1];
+      // Regex mejorado para extraer JSON completo incluso con objetos anidados
+      const jsonRegex = /(\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\})/gm;
+      const jsonMatch = jsonText.match(jsonRegex);
+      
+      if (jsonMatch && jsonMatch[0]) {
+        jsonText = jsonMatch[0];
       } else {
-        // Fallback to finding the end bracket
-        const possibleEndIndex = jsonText.indexOf('}') + 1;
-        if (possibleEndIndex > 0) {
-          jsonText = jsonText.substring(0, possibleEndIndex);
+        // Si no se encuentra el patrón completo, intentar encontrar el último corchete de cierre
+        // Contamos las llaves para encontrar el JSON correctamente
+        let openBraces = 0;
+        let closeBraces = 0;
+        let startPos = jsonText.indexOf('{');
+        let endPos = -1;
+        
+        if (startPos >= 0) {
+          for (let i = startPos; i < jsonText.length; i++) {
+            if (jsonText[i] === '{') openBraces++;
+            if (jsonText[i] === '}') {
+              closeBraces++;
+              if (openBraces === closeBraces) {
+                endPos = i + 1;
+                break;
+              }
+            }
+          }
+          
+          if (endPos > 0) {
+            jsonText = jsonText.substring(startPos, endPos);
+          }
         }
       }
       
       let jsonData;
       try {
         jsonText = sanitizeJsonText(jsonText);
+        // Verificación adicional para JSON incompleto
+        if (!jsonText.endsWith('}')) {
+          jsonText = jsonText + '}';
+        }
         jsonData = JSON.parse(jsonText);
       } catch (jsonError) {
         console.error('Error al parsear JSON de consulta:', jsonError);
         console.error('Texto JSON problemático:', jsonText);
         console.error('Respuesta completa:', response);
-        throw new Error('Formato de respuesta inválido');
+        
+        // Intentar extraer solo las partes importantes del JSON en caso de fallo
+        const simplifiedJSON = {
+          message: "consulta_detectada",
+          tipo: "desconocido",
+          contexto: message
+        };
+        
+        // Intentar extraer el tipo de la consulta
+        const tipoMatch = jsonText.match(/"tipo"\s*:\s*"([^"]+)"/);
+        if (tipoMatch && tipoMatch[1]) {
+          simplifiedJSON.tipo = tipoMatch[1];
+        }
+        
+        // Intentar extraer el contexto
+        const contextoMatch = jsonText.match(/"contexto"\s*:\s*"([^"]+)"/);
+        if (contextoMatch && contextoMatch[1]) {
+          simplifiedJSON.contexto = contextoMatch[1];
+        }
+        
+        // Intentar extraer los filtros si existen
+        const filtersStart = jsonText.indexOf('"filters"');
+        if (filtersStart > 0) {
+          const filtersText = jsonText.substring(filtersStart);
+          const filtersMatch = filtersText.match(/"filters"\s*:\s*(\{[^}]+\})/);
+          if (filtersMatch && filtersMatch[1]) {
+            const parsedFilters = tryParseJSON(filtersMatch[1]);
+            if (parsedFilters) {
+              simplifiedJSON.filters = parsedFilters;
+            }
+          }
+        }
+        
+        jsonData = simplifiedJSON;
       }
 
       /* Aseguramos contexto */
       if (!jsonData.contexto) {
-        jsonData.contexto = flattenConversation([
-          ...state.messages,
-          { role: 'user', content: message }
-        ]);
+        jsonData.contexto = message;
       }
 
       if (jsonData.message === 'consulta_detectada' && jsonData.tipo) {
-        /* ⬇️ Aquí enviamos SOLO EL CONTEXTO como "message" */ 
-        const queryResult = await processQuery(jsonData.contexto, sender);
+        /* Procesamos la consulta directamente */
+        cleanResponse = "Procesando tu consulta...";
+        
+        try {
+          /* Enviamos la consulta para procesamiento */
+          const queryResult = await processQuery(jsonData, sender);
 
-        if (queryResult.success) {
-          cleanResponse = queryResult.response;
-          state.lastProcessedMessage = message;
+          if (queryResult.success) {
+            cleanResponse = queryResult.response;
+            state.lastProcessedMessage = message;
+          }
+        } catch (queryError) {
+          console.error('Error al procesar la consulta:', queryError);
+          cleanResponse = "Lo siento, hubo un error al procesar tu consulta. Por favor, inténtalo de nuevo.";
         }
       }
     }
@@ -178,27 +292,77 @@ async function processWithOpenAI(message, sender) {
       const jsonStart = response.indexOf('===GENERAR_GRAFICA_SIGMA===') + '===GENERAR_GRAFICA_SIGMA==='.length;
       let jsonText = response.slice(jsonStart).trim();
       
-      // Try to extract just the JSON object using regex
-      const jsonMatch = jsonText.match(/(\{[\s\S]*?\})/);
-      if (jsonMatch && jsonMatch[1]) {
-        jsonText = jsonMatch[1];
+      // Regex mejorado para extraer JSON completo incluso con objetos anidados
+      const jsonRegex = /(\{(?:[^{}]|(?:\{(?:[^{}]|(?:\{[^{}]*\}))*\}))*\})/gm;
+      const jsonMatch = jsonText.match(jsonRegex);
+      
+      if (jsonMatch && jsonMatch[0]) {
+        jsonText = jsonMatch[0];
       } else {
-        // Fallback to finding the end bracket
-        const possibleEndIndex = jsonText.indexOf('}') + 1;
-        if (possibleEndIndex > 0) {
-          jsonText = jsonText.substring(0, possibleEndIndex);
+        // Si no se encuentra el patrón completo, intentar encontrar el último corchete de cierre
+        // Contamos las llaves para encontrar el JSON correctamente
+        let openBraces = 0;
+        let closeBraces = 0;
+        let startPos = jsonText.indexOf('{');
+        let endPos = -1;
+        
+        if (startPos >= 0) {
+          for (let i = startPos; i < jsonText.length; i++) {
+            if (jsonText[i] === '{') openBraces++;
+            if (jsonText[i] === '}') {
+              closeBraces++;
+              if (openBraces === closeBraces) {
+                endPos = i + 1;
+                break;
+              }
+            }
+          }
+          
+          if (endPos > 0) {
+            jsonText = jsonText.substring(startPos, endPos);
+          }
         }
       }
       
       let jsonData;
       try {
         jsonText = sanitizeJsonText(jsonText);
+        // Verificación adicional para JSON incompleto
+        if (!jsonText.endsWith('}')) {
+          jsonText = jsonText + '}';
+        }
         jsonData = JSON.parse(jsonText);
       } catch (jsonError) {
         console.error('Error al parsear JSON de gráfica:', jsonError);
         console.error('Texto JSON problemático:', jsonText);
         console.error('Respuesta completa:', response);
-        throw new Error('Formato de respuesta inválido');
+        
+        // Intentar extraer solo las partes importantes del JSON en caso de fallo
+        const simplifiedJSON = {
+          message: "grafica_solicitada",
+          query: message,
+          chartType: "bar"
+        };
+        
+        // Intentar extraer la consulta
+        const queryMatch = jsonText.match(/"query"\s*:\s*"([^"]+)"/);
+        if (queryMatch && queryMatch[1]) {
+          simplifiedJSON.query = queryMatch[1];
+        }
+        
+        // Intentar extraer el tipo de gráfica
+        const chartTypeMatch = jsonText.match(/"chartType"\s*:\s*"([^"]+)"/);
+        if (chartTypeMatch && chartTypeMatch[1]) {
+          simplifiedJSON.chartType = chartTypeMatch[1];
+        }
+        
+        // Intentar extraer el título
+        const titleMatch = jsonText.match(/"title"\s*:\s*"([^"]+)"/);
+        if (titleMatch && titleMatch[1]) {
+          simplifiedJSON.title = titleMatch[1];
+        }
+        
+        jsonData = simplifiedJSON;
       }
 
       if (jsonData.message === 'grafica_solicitada') {

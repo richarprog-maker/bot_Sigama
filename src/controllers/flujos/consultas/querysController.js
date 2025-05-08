@@ -11,20 +11,45 @@ const openaiService = require('../../../services/openaiService.js');
 async function processQuery(queryData, sender) {
     try {
         // Verificar si estamos recibiendo un objeto JSON o una cadena de texto
-        let query, queryType, queryParams;
+        let query, queryType, queryParams = {};
         
-        if (typeof queryData === 'object' && queryData.tipo && queryData.contexto) {
-            // Formato nuevo estructurado
-            logger.info(`Procesando consulta estructurada de tipo: ${queryData.tipo}`);
-            query = queryData.contexto;
-            queryType = queryData.tipo;
-            queryParams = queryData.parametros || {};
+        if (typeof queryData === 'object') {
+            // Formato estructurado
+            logger.info(`Procesando consulta estructurada: ${JSON.stringify(queryData)}`);
+            
+            if (queryData.tipo === 'historia_clinica' && queryData.placa) {
+                // Caso especial: consulta de historia clínica por placa
+                query = `Consulta la historia clínica del vehículo con placa ${queryData.placa}`;
+                queryType = 'HISTORIA_CLINICA';
+                queryParams = { placa: queryData.placa };
+                
+            } else if (queryData.tipo && queryData.contexto) {
+                // Formato estándar estructurado
+                query = queryData.contexto;
+                queryType = queryData.tipo.toUpperCase();
+                
+                // Extraer parámetros conocidos
+                if (queryData.placa) queryParams.placa = queryData.placa;
+                if (queryData.numero_ot) queryParams.numero_ot = queryData.numero_ot;
+                if (queryData.numero_nv) queryParams.numero_nv = queryData.numero_nv;
+                if (queryData.filters) {
+                    // Integrar filtros adicionales
+                    Object.assign(queryParams, queryData.filters);
+                }
+            } else {
+                // Formato mixto o incompleto
+                query = queryData.contexto || queryData.message || "consulta información";
+                queryType = queryData.tipo || null;
+            }
             
             // Establecer el contexto de consulta basado en el tipo
             queryService.setQueryContext(queryType);
             
             // Log de parámetros para depuración
+            logger.info(`Tipo de consulta detectado: ${queryType}`);
+            logger.info(`Query procesada: ${query}`);
             logger.info(`Parámetros de consulta: ${JSON.stringify(queryParams)}`);
+            
         } else {
             // Formato anterior (texto plano)
             logger.info(`Procesando consulta de base de datos en formato texto: ${queryData}`);
