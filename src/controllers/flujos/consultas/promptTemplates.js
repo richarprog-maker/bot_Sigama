@@ -286,7 +286,7 @@ CRÍTICO: La respuesta debe llegar al cliente como UN SOLO MENSAJE, no como mens
   - Cada **campo en una línea distinta**.
 
   OT: [número]
-  Sede: [local]
+  Sede: [sede]
   Asesor: [Nombre del asesor]
   Doc. Cliente: [Número de documento]
   Cliente: [cliente]
