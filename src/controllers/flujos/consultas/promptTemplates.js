@@ -103,17 +103,26 @@ Si la consulta es sobre stock, disponibilidad o información de un repuesto espe
 • CRÍTICO: Las consultas sobre facturación o montos de "repuestos" deben tratarse como consultas de OTs generales, no como consultas de stock de repuestos.
 
 
+/* HISTORIA CLÍNICA */
+Si la consulta es sobre historial clínico
+  → tabla a usar: "historial_clinica".
+  • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
+  • Si la consulta incluye la palabra "historial", "historia clínica", "clínica", usa LIMIT 5.
+  
+
 /* OTs */
 Si la consulta menciona "ots general",
   → tabla a usar: "ots_facturadas".
-• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica", SIEMPRE usa LIMIT 1 para devolver una sola fila, tambien usa el SELECT * FROM para devolver todas las columnas.
+• OTs ESPECÍFICA (por número o placa) → tabla "historial_clinica", SIEMPRE usa LIMIT 1 para devolver una sola fila, tambien usa el SELECT * FROM para devolver todas las columnas siempre en cuando no incluya historia clinca o algo similar.
 • OTs GENERAL                         → tabla "ots_facturadas".
 • Si preguntan por tipo busca en la columna de "tipo"  y no en tipo_ot recuerda eso la columna tipo
 • CRÍTICO: Diferencia entre consultas de MONTOS y CANTIDADES:
   - Si menciona "cuánto" o "facturación" o "monto" → usa SUM() para sumar las columnas de "precio_soles" o "precio_dolares" según la moneda mencionada.
   - IMPORTANTE: Si menciona "cuánto" o "facturación" o "monto" pero NO menciona una moneda específica (soles/dolares) → usa SUM(precio_total_factura) para sumar el monto total.
   - Si menciona "cuántas" o "cantidad" → usa COUNT() para contar el número de OTs que cumplen los criterios.
+  - simenciono tipo mo, haz en el where Tipo = "MO"
   - Si menciona "desglosar" o "desglose" o frases como "dame el desglose" → debes generar una consulta SQL que calcule 
+  - recuerda solo si menciona desglose o desglosar o frases como "dame el desglose" → debes generar una consulta SQL que calcule  sino nnca uses esta consulta
     separadamente los montos para cada categoría usando la columna "tipo". Ejemplo para una consulta de desglose:
     
     SELECT 
@@ -137,12 +146,7 @@ Si la consulta menciona "ots general",
 • IMPORTANTE: Si la consulta incluye asesor , SIEMPRE úsalo en el WHERE el like y lo mismo par ala marca.
 • IMPORTANTE: Si la consulta incluye "MEC" no completar a mecanica o al contrario si detectas mecanica para el where usa el valor de "MEC" , SIEMPRE úsalo en el WHERE con la columan de area.
 
-/* HISTORIA CLÍNICA */
-Si la consulta es sobre historial clínico
-  → tabla a usar: "historial_clinica".
-  • IMPORTANTE: Si la consulta incluye una placa específica, SIEMPRE úsala en el WHERE la placa del auto o vehiculo.
-  • Si la consulta incluye la palabra "historial", "historia clínica", "clínica", usa LIMIT 5.
-  
+
 /* PARÁMETROS ESPECÍFICOS */
 Si la consulta incluye parámetros específicos como:
 - placa: Úsala en el WHERE para filtrar por vehículo

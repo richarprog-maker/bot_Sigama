@@ -3,6 +3,7 @@
  * 
  */
 
+const { openai } = require('../../../config/openaiConfig.js');
 const { claude } = require('../../../config/claudeConfig.js');
 const { getConnection } = require('../../../config/dbConnection.js');
 const logger = require('console');
@@ -89,25 +90,51 @@ class EnhancedNaturalLanguageMySQLInterface {
         const prompt = promptTemplates.generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery);
 
         try {
-            const response = await claude.messages.create({
-                model: "claude-3-opus-20240229",
+            const response = await openai.chat.completions.create({
+                model: "gpt-4.1-2025-04-14",
                 messages: [{ role: "user", content: prompt }],
                 max_tokens: 200,
                 temperature: 0.2
             });
 
-            let sqlQuery = response.content[0].text.trim();
+            let sqlQuery = response.choices[0].message.content.trim();
             
-            // Limpiar formato de código si está presente
+            // Limpiar formato de código si está presente - manejo más robusto de patrones markdown
+            // 1. Eliminar bloques de código markdown completos
             if (sqlQuery.startsWith('```') && sqlQuery.endsWith('```')) {
                 sqlQuery = sqlQuery.substring(3, sqlQuery.length - 3).trim();
-            } else if (sqlQuery.startsWith('```sql') && sqlQuery.includes('```', 6)) {
-                sqlQuery = sqlQuery.substring(6, sqlQuery.lastIndexOf('```')).trim();
+            } 
+            
+            // 2. Eliminar bloques de código SQL específicos
+            if (sqlQuery.startsWith('```sql')) {
+                if (sqlQuery.endsWith('```')) {
+                    sqlQuery = sqlQuery.substring(6, sqlQuery.length - 3).trim();
+                } else if (sqlQuery.includes('```', 6)) {
+                    sqlQuery = sqlQuery.substring(6, sqlQuery.lastIndexOf('```')).trim();
+                }
             }
             
-            if (sqlQuery.toLowerCase().startsWith('sql')) {
-                sqlQuery = sqlQuery.substring(3).trim();
+            // 3. Manejo de prefijos comunes que pueden aparecer
+            const commonPrefixes = ['sql', 'consulta sql:', 'consulta:', 'select'];
+            for (const prefix of commonPrefixes) {
+                if (sqlQuery.toLowerCase().startsWith(prefix) && !sqlQuery.toLowerCase().startsWith('select ')) {
+                    sqlQuery = sqlQuery.substring(prefix.length).trim();
+                }
             }
+            
+            // 4. Eliminar caracteres de escape y formato innecesarios
+            sqlQuery = sqlQuery.replace(/\\n/g, ' '); // Reemplazar \n por espacios
+            sqlQuery = sqlQuery.replace(/\n\s*\n/g, '\n'); // Eliminar líneas en blanco
+            sqlQuery = sqlQuery.replace(/^\s*[\r\n]/gm, '\n'); // Normalizar saltos de línea
+            
+            // 5. Eliminar comillas si rodean toda la consulta
+            if ((sqlQuery.startsWith('"') && sqlQuery.endsWith('"')) || 
+                (sqlQuery.startsWith("'") && sqlQuery.endsWith("'"))) {
+                sqlQuery = sqlQuery.substring(1, sqlQuery.length - 1).trim();
+            }
+            
+            // 6. Restaurar formato legible con espacios consistentes
+            sqlQuery = sqlQuery.replace(/\s+/g, ' ').trim();
             
             // Verificar consultas potencialmente peligrosas
             const dangerousCommands = ['DROP', 'DELETE', 'UPDATE', 'INSERT'];
@@ -115,7 +142,6 @@ class EnhancedNaturalLanguageMySQLInterface {
                 throw new Error("Consulta potencialmente peligrosa detectada");
             }
             
-            // No almacenamos historial para evitar confusiones en consultas futuras
             return sqlQuery;
         } catch (error) {
             logger.error(`Error generando SQL: ${error.message}`);
