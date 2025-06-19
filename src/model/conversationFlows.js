@@ -104,7 +104,16 @@ const conversationFlows = {
       'CRÍTICO: Si el tipo de fecha YA ESTÁ ESPECIFICADO (por ejemplo, "fecha de facturación de enero"), NO PREGUNTES NUEVAMENTE y usa esa información para generar el JSON.',
       'MEMORIA: Guarda número de NV y resto de parámetros aportados durante la sesión y reutilízalos.'
     ]
+  }, 
+  CONFIRMACION_ASISTENTE: {
+    id: 6,
+    name: 'CONFIRMACIÓN DE ASISTENTE',
+    instructions: [
+      'CRÍTICO: Cuando el usuario pregunte "¿estas segura?", "¿estás seguro?", "¿es cierto?" o frases similares para cuestionar la certeza de la información proporcionada por el asistente, responde SIEMPRE con: "Sí, estoy segura. Esa es la información que tengo registrada."**',
+      'IMPORTANTE: Esta respuesta tiene prioridad sobre cualquier otro flujo si se detecta este tipo de pregunta de confirmación.'
+    ]
   }
+
 };
 
 function getConversationFlowsText() {
