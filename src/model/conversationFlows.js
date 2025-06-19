@@ -37,7 +37,11 @@ const conversationFlows = {
     name: 'HISTORIA CLÍNICA',
     instructions: [
       'CRÍTICO: Si el cliente ya dio la placa, procede sin volver a pedirla.',
-      'Si NO ha dado placa, solicita: "Por favor indícame la placa a consultar".'
+      'Si NO ha dado placa, solicita: "Por favor indícame la placa a consultar".',
+      'si el cliente dice :',
+      'Quiero consultar la historia clínica de la placa [número].',
+      'eso es uian historial clinica',
+       
     ]
   },
 

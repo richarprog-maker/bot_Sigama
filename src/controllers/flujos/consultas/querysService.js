@@ -1,24 +1,20 @@
 /**
- * Servicio para procesar consultas en lenguaje natural y convertirlas a SQL
- * 
+ * Servicio optimizado para procesar consultas en lenguaje natural y convertirlas a SQL
  */
 
 const { openai } = require('../../../config/openaiConfig.js');
 const { claude } = require('../../../config/claudeConfig.js');
 const { getConnection } = require('../../../config/dbConnection.js');
-const logger = require('console');
 const promptTemplates = require('./promptTemplates.js');
 
 class EnhancedNaturalLanguageMySQLInterface {
     constructor() {
         this._schemaCache = null;
-        // Eliminamos completamente el historial para evitar confusiones
         this.currentQueryContext = null;
     }
 
     /**
      * Obtiene y cachea el esquema de la base de datos
-     * @returns {Promise<Object>} Esquema de la base de datos
      */
     async getDatabaseSchema() {
         if (this._schemaCache) {
@@ -47,15 +43,15 @@ class EnhancedNaturalLanguageMySQLInterface {
             }
             
             this._schemaCache = schema;
+            
             return schema;
         } catch (error) {
-            logger.error(`Error al obtener esquema: ${error.message}`);
+            console.error(`Error al obtener esquema: ${error.message}`);
             throw error;
         } finally {
             if (conn) conn.release();
         }
     }
-
 
     async generateSchemaDescription() {
         const schema = await this.getDatabaseSchema();
@@ -75,68 +71,26 @@ class EnhancedNaturalLanguageMySQLInterface {
         return schemaDesc;
     }
 
- 
     async generateSqlQuery(naturalQuery) {
         const schemaDescription = await this.generateSchemaDescription();
-        
-        // Obtener el contexto actual de la consulta
         const currentContext = this.getQueryContext();
-        console.log(`Generando SQL con contexto: ${currentContext || 'No hay contexto específico'}`);
-        
-        // Obtener la guía contextual desde las plantillas
         const contextualGuidance = promptTemplates.getContextualGuidance(currentContext);
-        
-        // Generar el prompt utilizando la plantilla
         const prompt = promptTemplates.generateSqlPrompt(schemaDescription, contextualGuidance, naturalQuery);
 
         try {
             const response = await openai.chat.completions.create({
-                model: "gpt-4.1-2025-04-14",
+                model: "gpt-4o-mini",
                 messages: [{ role: "user", content: prompt }],
-                max_tokens: 200,
-                temperature: 0.2
+                max_tokens: 150,
+                temperature: 0.1
             });
 
             let sqlQuery = response.choices[0].message.content.trim();
             
-            // Limpiar formato de código si está presente - manejo más robusto de patrones markdown
-            // 1. Eliminar bloques de código markdown completos
-            if (sqlQuery.startsWith('```') && sqlQuery.endsWith('```')) {
-                sqlQuery = sqlQuery.substring(3, sqlQuery.length - 3).trim();
-            } 
+            // Limpiar formato de código
+            sqlQuery = this.cleanSqlQuery(sqlQuery);
             
-            // 2. Eliminar bloques de código SQL específicos
-            if (sqlQuery.startsWith('```sql')) {
-                if (sqlQuery.endsWith('```')) {
-                    sqlQuery = sqlQuery.substring(6, sqlQuery.length - 3).trim();
-                } else if (sqlQuery.includes('```', 6)) {
-                    sqlQuery = sqlQuery.substring(6, sqlQuery.lastIndexOf('```')).trim();
-                }
-            }
-            
-            // 3. Manejo de prefijos comunes que pueden aparecer
-            const commonPrefixes = ['sql', 'consulta sql:', 'consulta:', 'select'];
-            for (const prefix of commonPrefixes) {
-                if (sqlQuery.toLowerCase().startsWith(prefix) && !sqlQuery.toLowerCase().startsWith('select ')) {
-                    sqlQuery = sqlQuery.substring(prefix.length).trim();
-                }
-            }
-            
-            // 4. Eliminar caracteres de escape y formato innecesarios
-            sqlQuery = sqlQuery.replace(/\\n/g, ' '); // Reemplazar \n por espacios
-            sqlQuery = sqlQuery.replace(/\n\s*\n/g, '\n'); // Eliminar líneas en blanco
-            sqlQuery = sqlQuery.replace(/^\s*[\r\n]/gm, '\n'); // Normalizar saltos de línea
-            
-            // 5. Eliminar comillas si rodean toda la consulta
-            if ((sqlQuery.startsWith('"') && sqlQuery.endsWith('"')) || 
-                (sqlQuery.startsWith("'") && sqlQuery.endsWith("'"))) {
-                sqlQuery = sqlQuery.substring(1, sqlQuery.length - 1).trim();
-            }
-            
-            // 6. Restaurar formato legible con espacios consistentes
-            sqlQuery = sqlQuery.replace(/\s+/g, ' ').trim();
-            
-            // Verificar consultas potencialmente peligrosas
+            // Verificar consultas peligrosas
             const dangerousCommands = ['DROP', 'DELETE', 'UPDATE', 'INSERT'];
             if (dangerousCommands.some(cmd => sqlQuery.toUpperCase().includes(cmd))) {
                 throw new Error("Consulta potencialmente peligrosa detectada");
@@ -144,15 +98,52 @@ class EnhancedNaturalLanguageMySQLInterface {
             
             return sqlQuery;
         } catch (error) {
-            logger.error(`Error generando SQL: ${error.message}`);
+            console.error(`Error generando SQL: ${error.message}`);
             throw error;
         }
     }
 
     /**
-     * Ejecuta la consulta SQL con manejo robusto de errores
-     * @param {string} sqlQuery Consulta SQL a ejecutar
-     * @returns {Promise<Object>} Resultado de la consulta
+     * Limpia y normaliza la consulta SQL generada
+     */
+    cleanSqlQuery(sqlQuery) {
+        // Eliminar bloques de código markdown
+        if (sqlQuery.startsWith('```') && sqlQuery.endsWith('```')) {
+            sqlQuery = sqlQuery.substring(3, sqlQuery.length - 3).trim();
+        }
+        
+        if (sqlQuery.startsWith('```sql')) {
+            if (sqlQuery.endsWith('```')) {
+                sqlQuery = sqlQuery.substring(6, sqlQuery.length - 3).trim();
+            } else if (sqlQuery.includes('```', 6)) {
+                sqlQuery = sqlQuery.substring(6, sqlQuery.lastIndexOf('```')).trim();
+            }
+        }
+        
+        // Eliminar prefijos comunes
+        const commonPrefixes = ['sql', 'consulta sql:', 'consulta:', 'select'];
+        for (const prefix of commonPrefixes) {
+            if (sqlQuery.toLowerCase().startsWith(prefix) && !sqlQuery.toLowerCase().startsWith('select ')) {
+                sqlQuery = sqlQuery.substring(prefix.length).trim();
+            }
+        }
+        
+        // Normalizar formato
+        sqlQuery = sqlQuery.replace(/\\n/g, ' ')
+                          .replace(/\n\s*\n/g, '\n')
+                          .replace(/^\s*[\r\n]/gm, '\n');
+        
+        // Eliminar comillas envolventes
+        if ((sqlQuery.startsWith('"') && sqlQuery.endsWith('"')) || 
+            (sqlQuery.startsWith("'") && sqlQuery.endsWith("'"))) {
+            sqlQuery = sqlQuery.substring(1, sqlQuery.length - 1).trim();
+        }
+        
+        return sqlQuery.replace(/\s+/g, ' ').trim();
+    }
+
+    /**
+     * Ejecuta la consulta SQL
      */
     async executeQuery(sqlQuery) {
         let conn;
@@ -166,7 +157,7 @@ class EnhancedNaturalLanguageMySQLInterface {
                 query: sqlQuery
             };
         } catch (error) {
-            logger.error(`Error ejecutando query: ${error.message}`);
+            console.error(`Error ejecutando query: ${error.message}`);
             return {
                 success: false,
                 error: error.message,
@@ -179,8 +170,6 @@ class EnhancedNaturalLanguageMySQLInterface {
 
     /**
      * Convierte objetos no serializables a formatos compatibles con JSON
-     * @param {any} obj Objeto a convertir
-     * @returns {any} Objeto serializable
      */
     makeSerializable(obj) {
         if (obj === null || obj === undefined) {
@@ -208,16 +197,16 @@ class EnhancedNaturalLanguageMySQLInterface {
 
     /**
      * Establece el contexto actual de la consulta
-     * @param {string} context Tipo de contexto (OT, NV_MESON, REPUESTOS, etc.)
      */
     setQueryContext(context) {
         this.currentQueryContext = context;
-        console.log(`Contexto de consulta establecido: ${context}`);
+        if (context) {
+            console.log(`Contexto de consulta establecido: ${context}`);
+        }
     }
 
     /**
      * Obtiene el contexto actual de la consulta
-     * @returns {string|null} Contexto actual o null si no hay contexto
      */
     getQueryContext() {
         return this.currentQueryContext;
@@ -225,10 +214,8 @@ class EnhancedNaturalLanguageMySQLInterface {
     
     /**
      * Analiza el contexto de la conversación para determinar el tipo de consulta
-     * @param {Array} conversationHistory Historial de conversación
      */
     analyzeConversationContext(conversationHistory) {
-        // Tipos de consulta que podemos detectar
         const queryTypes = {
             OT: ['ots', 'orden de trabajo', 'orden trabajo', 'servicio', 'asesor', 'asesores'],
             NV_MESON: ['nv', 'nota de venta', 'mesón', 'meson', 'repuesto vendido'],
@@ -236,10 +223,7 @@ class EnhancedNaturalLanguageMySQLInterface {
             HISTORIA_CLINICA: ['historia', 'clínica', 'historial', 'reparaciones']
         };
 
-        // Analizar los últimos 10 mensajes (o menos si hay menos)
         const recentMessages = conversationHistory.slice(-10);
-        
-        // Contar menciones de cada tipo de consulta
         const typeCounts = {};
         
         for (const message of recentMessages) {
@@ -252,7 +236,6 @@ class EnhancedNaturalLanguageMySQLInterface {
             }
         }
         
-        // Determinar el tipo de consulta más mencionado
         let dominantType = null;
         let maxCount = 0;
         
@@ -265,28 +248,19 @@ class EnhancedNaturalLanguageMySQLInterface {
         
         if (dominantType) {
             this.setQueryContext(dominantType);
-            console.log(`Contexto detectado del historial de conversación: ${dominantType}`);
         }
     }
 
     /**
      * Procesa la consulta completa con respuesta natural optimizada
-     * @param {string} query Consulta en lenguaje natural
-     * @param {number} maxResults Número máximo de resultados a mostrar
-     * @param {Array} conversationHistory Historial de conversación para contexto
-     * @param {Object} queryParams Parámetros estructurados de la consulta (opcional)
-     * @returns {Promise<Object>} Respuesta procesada
      */
     async processNaturalLanguageQuery(query, maxResults = 10, conversationHistory = [], queryParams = null) {
-        // Si no tenemos un contexto establecido y hay historial, analizarlo
         if (!this.getQueryContext() && conversationHistory && conversationHistory.length > 0) {
             this.analyzeConversationContext(conversationHistory);
         }
         
-        // Enriquecer la consulta con los parámetros estructurados si están disponibles
         let enrichedQuery = query;
         if (queryParams) {
-            // Construir una consulta enriquecida con los parámetros explícitos
             const paramParts = [];
             
             if (queryParams.placa) paramParts.push(`placa: ${queryParams.placa}`);
@@ -303,32 +277,21 @@ class EnhancedNaturalLanguageMySQLInterface {
             if (paramParts.length > 0) {
                 enrichedQuery = `${query}. Parámetros adicionales: ${paramParts.join(', ')}`;
             }
-            
-            console.log(`Consulta enriquecida con parámetros: ${enrichedQuery}`);
         }
-        
-        // Registrar el contexto actual para depuración
-        console.log(`Procesando consulta con contexto: ${this.getQueryContext() || 'No hay contexto específico'}`);
         
         const sqlQuery = await this.generateSqlQuery(enrichedQuery);
         const queryResult = await this.executeQuery(sqlQuery);
         const serializableResult = this.makeSerializable(queryResult);
-        
-        // No almacenamos historial para evitar confusiones en consultas futuras
-        console.log(`Consulta procesada con tipo: ${this.getQueryContext() || 'GENERAL'}`);
         
         if (serializableResult.success && serializableResult.results.length > maxResults) {
             serializableResult.results = serializableResult.results.slice(0, maxResults);
             serializableResult.note = `Mostrando primeros ${maxResults} de ${queryResult.row_count} resultados`;
         }
         
-        // Verificar si hay resultados
         const noResults = !serializableResult.success || serializableResult.results.length === 0;
-        
-        // Obtener el contexto actual para personalizar la respuesta
         const currentContext = this.getQueryContext();
-        let contextualInstructions = '';
         
+        let contextualInstructions = '';
         if (currentContext) {
             contextualInstructions = `
             IMPORTANTE: El contexto actual de la conversación indica que estamos hablando sobre ${currentContext}.
@@ -336,7 +299,6 @@ class EnhancedNaturalLanguageMySQLInterface {
             `;
         }
         
-        // Generar el prompt utilizando la plantilla
         const prompt = promptTemplates.generateNaturalResponsePrompt(
             noResults, 
             contextualInstructions, 
@@ -359,18 +321,9 @@ class EnhancedNaturalLanguageMySQLInterface {
                 sql_query: sqlQuery
             };
         } catch (error) {
-            logger.error(`Error generando respuesta natural: ${error.message}`);
+            console.error(`Error generando respuesta natural: ${error.message}`);
             throw error;
         }
-    }
-
-    /**
-     * Devuelve el historial de consultas
-     * @returns {Array} Historial de consultas vacío
-     */
-    getQueryHistory() {
-        // Siempre devolvemos un array vacío ya que no almacenamos historial
-        return [];
     }
 }
 

@@ -4,77 +4,59 @@
  */
 
 const queryService = require('./querysService.js');
-const logger = require('console');
 const openaiService = require('../../../services/openaiService.js');
-
 
 async function processQuery(queryData, sender) {
     try {
-        // Verificar si estamos recibiendo un objeto JSON o una cadena de texto
         let query, queryType, queryParams = {};
         
         if (typeof queryData === 'object') {
-            // Formato estructurado
-            logger.info(`Procesando consulta estructurada: ${JSON.stringify(queryData)}`);
+            console.info(`Procesando consulta estructurada: ${JSON.stringify(queryData)}`);
             
             if (queryData.tipo === 'historia_clinica' && queryData.placa) {
-                // Caso especial: consulta de historia clínica por placa
                 query = `Consulta la historia clínica del vehículo con placa ${queryData.placa}`;
                 queryType = 'HISTORIA_CLINICA';
                 queryParams = { placa: queryData.placa };
                 
             } else if (queryData.tipo && queryData.contexto) {
-                // Formato estándar estructurado
                 query = queryData.contexto;
                 queryType = queryData.tipo.toUpperCase();
                 
-                // Extraer parámetros conocidos
                 if (queryData.placa) queryParams.placa = queryData.placa;
                 if (queryData.numero_ot) queryParams.numero_ot = queryData.numero_ot;
                 if (queryData.numero_nv) queryParams.numero_nv = queryData.numero_nv;
                 if (queryData.filters) {
-                    // Integrar filtros adicionales
                     Object.assign(queryParams, queryData.filters);
                 }
             } else {
-                // Formato mixto o incompleto
                 query = queryData.contexto || queryData.message || "consulta información";
                 queryType = queryData.tipo || null;
             }
             
-            // Establecer el contexto de consulta basado en el tipo
             queryService.setQueryContext(queryType);
             
-            // Log de parámetros para depuración
-            logger.info(`Tipo de consulta detectado: ${queryType}`);
-            logger.info(`Query procesada: ${query}`);
-            logger.info(`Parámetros de consulta: ${JSON.stringify(queryParams)}`);
+            console.info(`Tipo de consulta detectado: ${queryType}`);
+            console.info(`Query procesada: ${query}`);
+            console.info(`Parámetros de consulta: ${JSON.stringify(queryParams)}`);
             
         } else {
-            // Formato anterior (texto plano)
-            logger.info(`Procesando consulta de base de datos en formato texto: ${queryData}`);
+            console.info(`Procesando consulta de base de datos en formato texto: ${queryData}`);
             query = queryData;
             
-            // Obtener el historial de conversación del estado global
             const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
             const conversationHistory = conversationState ? conversationState.messages : [];
             
-            // Resetear el contexto de consulta anterior para evitar que se quede atrapado en un contexto
             queryService.setQueryContext(null);
         }
         
-        // Obtener el historial de conversación del estado global para contexto adicional
         const conversationState = require('../../main/flujoPrincipal.js').getOrCreateConversationState(sender);
         const conversationHistory = conversationState ? conversationState.messages : [];
         
-        // Pasar el historial de conversación y los parámetros al servicio de consultas
         const result = await queryService.processNaturalLanguageQuery(query, 10, conversationHistory, queryParams);
 
-        // Agregar console.log para ver la consulta SQL y los resultados en la terminal
         console.log('===== CONSULTA SQL Y RESULTADOS =====');
         console.log('Contexto detectado:', queryService.getQueryContext());
         console.log('SQL Query:', result.sql_query);
-        // console.log('Resultados:', JSON.stringify(result.query_result.results, null, 2));
         console.log('====================================');
 
         return {
@@ -86,7 +68,7 @@ async function processQuery(queryData, sender) {
             }
         };
     } catch (error) {
-        logger.error(`Error procesando consulta: ${error.message}`);
+        console.error(`Error procesando consulta: ${error.message}`);
         return {
             success: false,
             response: "Lo siento, no pude procesar tu consulta a la base de datos. Por favor, intenta con otra pregunta.",
@@ -95,16 +77,8 @@ async function processQuery(queryData, sender) {
     }
 }
 
-
-function getQueryHistory() {
-    // Siempre devolvemos un array vacío ya que no almacenamos historial
-    return [];
-}
-
-
 async function isDatabaseQuery(message) {
     try {
-        // Crear un prompt específico para detectar si es una consulta a base de datos
         const systemContent = "Eres un asistente especializado en detectar si un mensaje contiene una intención de consulta a una base de datos. Debes responder únicamente 'true' si el mensaje parece solicitar información de una base de datos o 'false' si no lo es.";
         
         const messages = [
@@ -120,8 +94,8 @@ async function isDatabaseQuery(message) {
         ]);
         return result.trim().toLowerCase() === 'true';
     } catch (error) {
-        logger.error(`Error al evaluar si es consulta de base de datos: ${error.message}`);
-        // En caso de error, usar el método de palabras clave como fallback
+        console.error(`Error al evaluar si es consulta de base de datos: ${error.message}`);
+        
         const databaseKeywords = [
             'base de datos', 'consulta', 'query', 'sql', 'tabla', 'datos',
             'registros', 'información de', 'busca en', 'muestra', 'lista',
@@ -136,6 +110,5 @@ async function isDatabaseQuery(message) {
 
 module.exports = {
     processQuery,
-    getQueryHistory,
     isDatabaseQuery
 };
