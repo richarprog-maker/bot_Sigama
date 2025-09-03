@@ -3,7 +3,6 @@
  */
 
 const { openai } = require('../../../config/openaiConfig.js');
-const { claude } = require('../../../config/claudeConfig.js');
 const { getConnection } = require('../../../config/dbConnection.js');
 const promptTemplates = require('./promptTemplates.js');
 
@@ -308,15 +307,15 @@ class EnhancedNaturalLanguageMySQLInterface {
         );
         
         try {
-            const response = await claude.messages.create({
-                model: "claude-3-opus-20240229",
+            const response = await openai.chat.completions.create({
+                model: "gpt-4.1",
                 messages: [{ role: "user", content: prompt }],
                 max_tokens: 1000,
                 temperature: 0.3
             });
-            
+
             return {
-                natural_response: response.content[0].text.trim(),
+                natural_response: response.choices[0].message.content.trim(),
                 query_result: queryResult,
                 sql_query: sqlQuery
             };
